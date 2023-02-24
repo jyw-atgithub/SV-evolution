@@ -102,12 +102,19 @@ name=$(echo $k | sed "s@${assemble}\/@@g; s@\/assembly.fasta@@g")
 r1="${trimmed}/${name}.trimmed.r1.fastq"
 r2="${trimmed}/${name}.trimmed.r2.fastq"
 
-bwa index $k
-bwa mem -t ${nT} $k $r1 $r2 |samtools view -S -b -h |\
-samtools sort -@ ${nT} -o ${polishing}/${name}_ILL2ONT.sort.bam
-samtools index ${polishing}/${name}_ILL2ONT.sort.bam
+#bwa index $k
+#bwa mem -t ${nT} $k $r1 $r2 |samtools view -S -b -h |\
+#samtools sort -@ ${nT} -o ${polishing}/${name}_ILL2ONT.sort.bam
+#samtools index ${polishing}/${name}_ILL2ONT.sort.bam
+
+java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid \
+--genome ${assemble}/${name}/assembly.fasta \
+--frags ${polishing}/${name}_ILL2ONT.sort.bam \
+--output ${name} --outdir ${polishing} 
 done
 #--threads is not supported by Pilon anymore
+#Do NOT use the pilon installed by Anaconda, it will crash because of memory limit.
+#Just download the precompiled jar file from the latest release on Github.
 
 java -Xmx128G -jar /home/jenyuw/Software/pilon-1.24.jar --diploid \
 --genome ${assemble}/nv107/assembly.fasta \
