@@ -7,3 +7,5 @@
 |Helix|||Theoratical, no github|
 |SquiggleNet|2021|2021/Sep|trainable, no update since pub.|
 |Chiron|2017|2020/Lan. v.0.6.1|trainable, no update since 2021/May|
+|DeepNano|2017|2017/Apr|python 2.7, no update since pub.|
+|DeepNano-blitz|2020|2021/May|only for R9.4.7, no update since 2021/May.|
