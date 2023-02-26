@@ -7,6 +7,7 @@ assemble="/home/jenyuw/SV-project/result/assemble"
 aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
 polishing="/home/jenyuw/SV-project/result/polishing"
 ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
+canu_proc="/home/jenyuw/SV-project/result/canu_processing"
 ## prep
 source ~/.bashrc
 nT=10
@@ -18,9 +19,23 @@ fastqc -t $nT -f fastq -o ${qc_report} ${raw}/nv1*_illumina_r?.fastq
 #parallel "fastqc -f fastq -o ${qc_report} " ::: ${raw}/*.fastq
 #fastq has built-in parallel option
 wait
+
+
 ## The initial QC report LONG reads
-#python longQC.py sampleqc -x ont-ligation -o ${qc_report} nv107_combined.fastq
-#not working now
+conda activate longqc #this contains longQc
+# Yes, it is really tricky. Install the full version of LongQC on Anaconda (for all the implicit depency) 
+# and also install the longQc locally from github. 
+# Then cite the path to locally installed LongQC
+for i in $(ls ${raw}/*_combined.fastq)
+do
+name=$(basename ${i}|sed s/"_combined.fastq"//g)
+python /home/jenyuw/Software/LongQC/longQC.py sampleqc -p 10 -x ont-ligation -n 9999 \
+-o ${qc_report}/${name}_longQC -s ${name} ${i}
+done
+#The command below does not work properly bacause it cannot general reports.
+#python /home/jenyuw/anaconda3/envs/longqc/bin/longQC.py sampleqc 
+
+
 
 
 # pycoQC is also installed locally
@@ -40,16 +55,53 @@ done
 # Chopper only accept stdin, but this does NOT work.
 
 
-## Long-read assembly
+## Long-read assembly with flye
 conda activate assemble #this include flye, canu, bwa, fastp, trimmomatic, assembly-stats, mummer(4), bwa-mem2
 # --nano-raw, The expected error rate is 10-15%
 for i in $(ls ${trimmed}/*.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
-flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${name}
+flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
 done
 
-## Short-read mapping with sortingraw="/home/jenyuw/SV-project/raw"
+## Long-read assembly with Canu
+# use Canu to correct, trim and assemble
+
+${canu_proc}
+for i in $(ls ${raw}/*_combined.fastq)
+do
+name=$(basename ${i}|sed s/"_combined.fastq"//g)
+
+canu -correct \
+-p ${name}.corrected -d ${canu_proc} \
+genomeSize=170m \
+-nanopore ${i}
+
+done
+
+/data/home/jenyuw/anaconda3/envs/assemble/bin/sqStoreCreate \
+  -o ./nv107.corrected.seqStore.BUILDING \
+  -minlength 1000 \
+  -genomesize 170000000 \
+  -coverage   200 \
+  -bias       0 \
+  -raw -nanopore nv107_combined /data/home/jenyuw/NV_reads/nv107/combined_fastq/nv107_combined.fastq \
+
+
+canu [-haplotype|-correct|-trim] \
+   [-s <assembly-specifications-file>] \
+   -p <assembly-prefix> \
+   -d <assembly-directory> \
+   genomeSize=<number>[g|m|k] \
+   [other-options] \
+   [-trimmed|-untrimmed|-raw|-corrected] \
+   [-pacbio|-nanopore|-pacbio-hifi] *fastq
+done
+
+
+
+## Short-read mapping with sorting
+raw="/home/jenyuw/SV-project/raw"
 qc_report="/home/jenyuw/SV-project/result/qc_report"
 trimmed="/home/jenyuw/SV-project/result/trimmed"
 assemble="/home/jenyuw/SV-project/result/assemble"
@@ -58,7 +110,7 @@ polishing="/home/jenyuw/SV-project/result/polishing"
 ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
 #bwa index ${ref_genome}
 
-: <<'SKIP' # this does NOT work.
+: <<'SKIP'
 SKIP
 nptest="/home/jenyuw/SV-project/np-test"
 
@@ -96,12 +148,11 @@ assembly-stats
 dnadiff –p out assembly.fasta ${ref_genome}
 
 
-for k in $(ls ${assemble}/nv???/assembly.fasta)
+for k in $(ls ${assemble}/nv???_Flye/assembly.fasta)
 do
-name=$(echo $k | sed "s@${assemble}\/@@g; s@\/assembly.fasta@@g")
+name=$(echo $k | sed "s@${assemble}\/@@g; s@_Flye@@g;; s@\/assembly.fasta@@g")
 r1="${trimmed}/${name}.trimmed.r1.fastq"
 r2="${trimmed}/${name}.trimmed.r2.fastq"
-
 #bwa index $k
 #bwa mem -t ${nT} $k $r1 $r2 |samtools view -S -b -h |\
 #samtools sort -@ ${nT} -o ${polishing}/${name}_ILL2ONT.sort.bam
@@ -115,16 +166,9 @@ done
 #--threads is not supported by Pilon anymore
 #Do NOT use the pilon installed by Anaconda, it will crash because of memory limit.
 #Just download the precompiled jar file from the latest release on Github.
+#"java -Xmx128G -jar" means giving the program an allowance of 128Gb memory.
+#java -XX:+AggressiveHeap -jar means letting the program use as much memory as needed.
 
-java -Xmx128G -jar /home/jenyuw/Software/pilon-1.24.jar --diploid \
---genome ${assemble}/nv107/assembly.fasta \
---frags ${polishing}/nv107_ILL2ONT.sort.bam \
---output nv107 --outdir ${polishing} 
-
-java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid \
---genome ${assemble}/nv107/assembly.fasta \
---frags ${polishing}/nv107_ILL2ONT.sort.bam \
---output nv107 --outdir ${polishing} 
 
 
 trimmed="/home/jenyuw/SV-project/result/trimmed"
@@ -144,5 +188,3 @@ echo "bwa mem 2 began at"
 date
 time bwa-mem2 mem -t ${nT} ${ref1} ${trimmed}/nv107.trimmed.r1.fastq ${trimmed}/nv107.trimmed.r2.fastq >aln2.sam
 date
-
-java -Xmx128G -jar /home/jenyuw/Software/pilon-1.24.jar
