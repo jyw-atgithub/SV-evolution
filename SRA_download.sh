@@ -91,3 +91,9 @@ echo $name
 fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/PRJNA929424/${name}
 #with --stdout, the -O is ignored
 done
+
+for i in /home/jenyuw/SV-project/raw/PRJNA929424/SRR*/
+do
+echo $i
+rm -r $i
+done
