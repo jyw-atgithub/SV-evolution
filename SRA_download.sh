@@ -64,3 +64,17 @@ echo $name
 fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/${strain}/${name}
 #with --stdout, the -O is ignored
 done
+
+
+##NCBI_download
+
+prefetch PRJNA929424 -O /home/jenyuw/SV-project/raw/PRJNA929424/
+
+
+PRJNA929424     SRR23269563     ONT     Denmark
+PRJNA929424     SRR23269565     ONT     Finland
+PRJNA929424     SRR23269574     ONT     Spain
+PRJNA929424     SRR23269564     ONT     Sweden
+PRJNA929424     SRR23269572     ONT     Turkey
+PRJNA929424     SRR23269573     ONT     Ukraine
+PRJNA929424     SRR23269571     ONT     Zambia
