@@ -66,9 +66,12 @@ fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/ra
 done
 
 
+
 ##NCBI_download
 
-prefetch PRJNA929424 -O /home/jenyuw/SV-project/raw/PRJNA929424/
+# prefetch PRJNA929424 -O /home/jenyuw/SV-project/raw/PRJNA929424/
+# this is fine, but it includes data other than DNA seq so we will waste on time to download unwanted items.
+
 
 
 PRJNA929424     SRR23269563     ONT     Denmark
@@ -78,3 +81,13 @@ PRJNA929424     SRR23269564     ONT     Sweden
 PRJNA929424     SRR23269572     ONT     Turkey
 PRJNA929424     SRR23269573     ONT     Ukraine
 PRJNA929424     SRR23269571     ONT     Zambia
+
+
+for i in /home/jenyuw/SV-project/raw/PRJNA929424/SRR*/*.sra
+do
+echo $i
+name=`basename $i | sed 's/.sra/_ONT.fastq.gz/'`
+echo $name
+fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/PRJNA929424/${name}
+#with --stdout, the -O is ignored
+done
