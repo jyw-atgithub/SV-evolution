@@ -1,13 +1,14 @@
 #!/bin/bash
 ## path
+ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
 raw="/home/jenyuw/SV-project/raw"
 qc_report="/home/jenyuw/SV-project/result/qc_report"
 trimmed="/home/jenyuw/SV-project/result/trimmed"
 assemble="/home/jenyuw/SV-project/result/assemble"
 aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
 polishing="/home/jenyuw/SV-project/result/polishing"
-ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
 canu_proc="/home/jenyuw/SV-project/result/canu_processing"
+scaffold="/home/jenyuw/SV-project/result/scaffold"
 ## prep
 source ~/.bashrc
 nT=10
@@ -161,7 +162,7 @@ r2="${trimmed}/${name}.trimmed.r2.fastq"
 java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid \
 --genome ${assemble}/${name}/assembly.fasta \
 --frags ${polishing}/${name}_ILL2ONT.sort.bam \
---output ${name} --outdir ${polishing} 
+--output ${name}.polished --outdir ${polishing} 
 done
 #--threads is not supported by Pilon anymore
 #Do NOT use the pilon installed by Anaconda, it will crash because of memory limit.
@@ -188,3 +189,13 @@ echo "bwa mem 2 began at"
 date
 time bwa-mem2 mem -t ${nT} ${ref1} ${trimmed}/nv107.trimmed.r1.fastq ${trimmed}/nv107.trimmed.r2.fastq >aln2.sam
 date
+
+
+## scaffolding.sh
+conda activate post-proc
+for i in $(ls ${polishing}/*.polished.fasta)
+do
+name=$(basename $i |sed s/.polished.fasta//g)
+echo $name
+ragtag.py scaffold -t ${nT} -o ${scaffold}/${name} $ref_genome ${i}
+done
