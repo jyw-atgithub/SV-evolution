@@ -66,19 +66,22 @@ flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${na
 done
 
 ## Long-read assembly with Canu
-# use Canu to correct, trim and assemble
+# use Canu to correct, trim and assemble, all at once
 
-${canu_proc}
-for i in $(ls ${raw}/*_combined.fastq)
+
+for i in $(ls ${trimmed}/*.trimmed.fastq)
 do
-name=$(basename ${i}|sed s/"_combined.fastq"//g)
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
 
-canu -correct \
--p ${name}.corrected -d ${canu_proc} \
+canu \
+-p ${name}.corrected -d ${assemble}/${name}_canu \
 genomeSize=170m \
--nanopore ${i}
-
+maxInputCoverage=90 \
+minReadLength=500 \
+-raw -nanopore ${i}
 done
+
+
 
 /data/home/jenyuw/anaconda3/envs/assemble/bin/sqStoreCreate \
   -o ./nv107.corrected.seqStore.BUILDING \
@@ -97,7 +100,6 @@ canu [-haplotype|-correct|-trim] \
    [other-options] \
    [-trimmed|-untrimmed|-raw|-corrected] \
    [-pacbio|-nanopore|-pacbio-hifi] *fastq
-done
 
 
 

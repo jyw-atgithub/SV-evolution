@@ -27,8 +27,8 @@ do
 name=$(basename ${i}|sed s/".fastq.gz"//g)
 echo $i 
 echo $name
-#python /home/jenyuw/Software/LongQC/longQC.py sampleqc -p 10 -x ont-ligation -n 6000 \
-#-o ${qc_report}/${name}_longQC -s ${name} ${i}
+python /home/jenyuw/Software/LongQC/longQC.py sampleqc -p 10 -x ont-ligation -n 6000 \
+-o ${qc_report}/${name}_longQC -s ${name} ${i}
 done
 
 conda activate qc 
@@ -38,8 +38,8 @@ do
 name=$(basename ${i}|sed s/".fastq.gz"//g)
 echo $i 
 echo $name
-#porechop_abi -abi --threads $nT -i ${i} -o ${trimmed}/${name}.abi.fastq
-#cat ${trimmed}/${name}.abi.fastq | chopper -l 500 --headcrop 10 --tailcrop 10 --threads $nT  > ${trimmed}/${name}.trimmed.fastq
+porechop_abi -abi --threads $nT -i ${i} -o ${trimmed}/${name}.abi.fastq
+cat ${trimmed}/${name}.abi.fastq | chopper -l 500 --headcrop 10 --tailcrop 10 --threads $nT  > ${trimmed}/${name}.trimmed.fastq
 done
 
 conda activate assemble
@@ -49,5 +49,5 @@ do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
 echo $i 
 echo $name
-#flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
+flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
 done
