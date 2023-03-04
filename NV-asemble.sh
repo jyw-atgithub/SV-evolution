@@ -9,6 +9,7 @@ aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
 polishing="/home/jenyuw/SV-project/result/polishing"
 canu_proc="/home/jenyuw/SV-project/result/canu_processing"
 scaffold="/home/jenyuw/SV-project/result/scaffold"
+busco_out="/home/jenyuw/SV-project/result/busco_out"
 ## prep
 source ~/.bashrc
 nT=10
@@ -104,13 +105,7 @@ canu [-haplotype|-correct|-trim] \
 
 
 ## Short-read mapping with sorting
-raw="/home/jenyuw/SV-project/raw"
-qc_report="/home/jenyuw/SV-project/result/qc_report"
-trimmed="/home/jenyuw/SV-project/result/trimmed"
-assemble="/home/jenyuw/SV-project/result/assemble"
-aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
-polishing="/home/jenyuw/SV-project/result/polishing"
-ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
+
 #bwa index ${ref_genome}
 
 : <<'SKIP'
@@ -174,25 +169,6 @@ done
 
 
 
-trimmed="/home/jenyuw/SV-project/result/trimmed"
-ref1="/home/jenyuw/SV-project/bwamem2-test/dmel-all-chromosome-r6.49.fasta"
-ref2="/home/jenyuw/SV-project/bwamem2-test/dmel-all-chromosome-r6.49-2.fasta"
-source ~/.bashrc
-nT=10
-
-time bwa index ${ref1}
-echo "bwa mem began at"
-date
-time bwa mem -t ${nT} ${ref1} ${trimmed}/nv107.trimmed.r1.fastq ${trimmed}/nv107.trimmed.r2.fastq >aln1.sam
-date
-
-time bwa-mem2 index ${ref2}
-echo "bwa mem 2 began at"
-date
-time bwa-mem2 mem -t ${nT} ${ref1} ${trimmed}/nv107.trimmed.r1.fastq ${trimmed}/nv107.trimmed.r2.fastq >aln2.sam
-date
-
-
 ## scaffolding.sh
 conda activate post-proc
 for i in $(ls ${polishing}/*.polished.fasta)
@@ -201,3 +177,36 @@ name=$(basename $i |sed s/.polished.fasta//g)
 echo $name
 ragtag.py scaffold -t ${nT} -o ${scaffold}/${name} $ref_genome ${i}
 done
+
+ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
+raw="/home/jenyuw/SV-project/raw"
+qc_report="/home/jenyuw/SV-project/result/qc_report"
+trimmed="/home/jenyuw/SV-project/result/trimmed"
+assemble="/home/jenyuw/SV-project/result/assemble"
+aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
+polishing="/home/jenyuw/SV-project/result/polishing"
+canu_proc="/home/jenyuw/SV-project/result/canu_processing"
+scaffold="/home/jenyuw/SV-project/result/scaffold"
+busco_out="/home/jenyuw/SV-project/result/busco_out"
+
+conda activate busco
+for i in $(ls ${assemble}/nv*_Flye/assembly.fasta)
+do
+strain=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_Flye//g)
+echo $strain
+busco -i ${i} --out_path ${busco_out} -o ${strain} -m genome --cpu 20 -l diptera_odb10
+done
+
+busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
+
+
+minimap2 -t 20 -a -B 5 -x map-ont \
+/home/jenyuw/SV-project-backup/reference_genome/dmel-all-chromosome-r6.49.fasta \
+/home/jenyuw/SV-project-backup/result/assembly/nv107_Flye_assembly.fasta |samtools view -b -h -@ 20 -o nv107_mapped.bam
+samtools sort -@ 20 -o nv107_mapped.sort.bam nv107_mapped.bam
+
+
+cuteSV --threads 20 \
+--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
+nv107_mapped.sort.bam /home/jenyuw/SV-project-backup/reference_genome/dmel-all-chromosome-r6.49.fasta \
+nv107.vcf .
