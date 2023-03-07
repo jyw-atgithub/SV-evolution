@@ -200,13 +200,3 @@ done
 busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
 
 
-minimap2 -t 20 -a -B 5 -x map-ont \
-/home/jenyuw/SV-project-backup/reference_genome/dmel-all-chromosome-r6.49.fasta \
-/home/jenyuw/SV-project-backup/result/assembly/nv107_Flye_assembly.fasta |samtools view -b -h -@ 20 -o nv107_mapped.bam
-samtools sort -@ 20 -o nv107_mapped.sort.bam nv107_mapped.bam
-
-
-cuteSV --threads 20 \
---max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
-nv107_mapped.sort.bam /home/jenyuw/SV-project-backup/reference_genome/dmel-all-chromosome-r6.49.fasta \
-nv107.vcf .
