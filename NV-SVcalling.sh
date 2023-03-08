@@ -26,7 +26,7 @@ ${ref_genome} \
 #SVIM-asm
 svim-asm haploid svim-asm-nv107.2 nv107_mapped.sort.2.bam /home/jenyuw/SV-project-backup/reference_genome/dmel-all-chromosome-r6.49.fasta
 
-## Mapping-based
+## Mapping-based, so we have to map the ONT reads to the reference genome.
 ##9mapping-based.sh
 
 for i in $(ls ${raw}/*_combined.fastq)
@@ -34,16 +34,16 @@ do
 name=$(basename ${i}|sed s/"_combined.fastq"//g)
 echo $name
 echo ${aligned_bam}/${name}_ONT.sort.bam
-#minimap2 -t ${nT} -B 5 -a -x map-ont \
-#${ref_genome} $i |\
-#samtools view -b -h -@ ${nT} -o - |\
-#samtools sort -@ ${nT} -o ${aligned_bam}/${name}_ONT.sort.bam
-#samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.sort.bam
+minimap2 -t ${nT} -B 5 -a -x map-ont \
+${ref_genome} $i |\
+samtools view -b -h -@ ${nT} -o - |\
+samtools sort -@ ${nT} -o ${aligned_bam}/${name}_ONT.sort.bam
+samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.sort.bam
 done
 
 for j in $(ls ${aligned_bam}/*_ONT.sort.bam)
 do
-name=$(basename ${i}|sed s/"_ONT.sort.bam"//g)
+name=$(basename ${j}|sed s/"_ONT.sort.bam"//g)
 echo $name
 
 cd ${SVs}
@@ -52,11 +52,11 @@ cuteSV --threads 20 \
 -l 50 -L 500000 \
 -r 500 -q 20 -s 3 \
 --max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
-$j ${ref_genome} nv107-cutesv.vcf .
+$j ${ref_genome} "${name}-cutesv.vcf" .
 #sniffles
 sniffles --threads 20 \
 --reference ${ref_genome} \
---input $j --vcf nv107-sniffles.vcf 
+--input $j --vcf "${name}-sniffles.vcf" 
 done
 
 

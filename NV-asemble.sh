@@ -151,10 +151,10 @@ do
 name=$(echo $k | sed "s@${assemble}\/@@g; s@_Flye@@g;; s@\/assembly.fasta@@g")
 r1="${trimmed}/${name}.trimmed.r1.fastq"
 r2="${trimmed}/${name}.trimmed.r2.fastq"
-#bwa index $k
-#bwa mem -t ${nT} $k $r1 $r2 |samtools view -S -b -h |\
-#samtools sort -@ ${nT} -o ${polishing}/${name}_ILL2ONT.sort.bam
-#samtools index ${polishing}/${name}_ILL2ONT.sort.bam
+bwa index $k
+bwa mem -t ${nT} $k $r1 $r2 |samtools view -S -b -h |\
+samtools sort -@ ${nT} -o ${polishing}/${name}_ILL2ONT.sort.bam
+samtools index ${polishing}/${name}_ILL2ONT.sort.bam
 
 java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid \
 --genome ${assemble}/${name}/assembly.fasta \
@@ -170,7 +170,7 @@ done
 
 
 ## scaffolding.sh
-conda activate post-proc
+conda activate post-proc #this contain Racon, Ragtag
 for i in $(ls ${polishing}/*.polished.fasta)
 do
 name=$(basename $i |sed s/.polished.fasta//g)
@@ -194,9 +194,9 @@ for i in $(ls ${assemble}/nv*_Flye/assembly.fasta)
 do
 strain=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_Flye//g)
 echo $strain
-busco -i ${i} --out_path ${busco_out} -o ${strain} -m genome --cpu 20 -l diptera_odb10
+busco -i ${i} --out_path ${busco_out} -o ${strain} -m genome --cpu 8 -l diptera_odb10
 done
 
 busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
 
-
+busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
