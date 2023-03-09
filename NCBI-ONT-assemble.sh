@@ -54,19 +54,44 @@ for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
 
 ##polishing, without illumina reads or FAST5. --> Medaka or Racon.
 ##Medaka is designed to be used on Flye assembly directly!!
+##Medaka was installed with "pip" because Anaconda kept failing.
 conda activate post-proc
 
-for i in $(ls ${assemble}/SRR232695*_ONT_Flye/assembly.fasta)
+
+for i in $(ls ${assemble}/SRR*_ONT_Flye/assembly.fasta)
 do
 echo $i 
-name=$(echo $i | echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
+name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
 echo $name
+
+medaka_consensus -i ${raw}/PRJNA929424/${name}_ONT.fastq.gz -d ${i} -o ${polishing}/${name}-medaka-1 \
+-t ${nT} -m r941_min_hac_g507
+done
+
+
+for i in /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta
+do
+echo $i 
+name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
+echo $name
+
+medaka_consensus -i /home/jenyuw/SV-project/raw/PRJNA929424/SRR23269563_ONT.fastq.gz \
+-d /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta \
+-o ${polishing}/SRR23269563-medaka-1/ \
+-t ${nT} -m r941_min_hac_g507
+done
+
 
 minimap2 -t ${nT} -B 5 -a -x map-ont \
 $i ${trimmed}/${name}_ONT.trimmed.fastq |\
 samtools view -b -h -@ ${nT} -o - |\
 samtools sort -@ ${nT} -o ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
-samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.sort.bam
+samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
+
+medaka_consensus -i ${BASECALLS} -d ${DRAFT} -o ${OUTDIR} -t ${nT}\
+-m r941_min_hac_g507
+
+
 
 racon -t ${nT} \
 ${trimmed}/${name}_ONT.trimmed.fastq \
@@ -76,8 +101,3 @@ $i \
 
 rm ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
 rm ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam.bai
-done
-
-
-
-

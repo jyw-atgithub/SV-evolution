@@ -34,7 +34,7 @@ wait
 done </home/jenyuw/SV-project/raw/DSPR_NCBI_SRX_list.tsv
 
 DSPR_NCBI_SRX_list.tsv
--------------------------first download batch
+-------------------------first download batch, Finished
 SRX4728152      AB8
 SRX4599325      A2
 SRX4722917      A6
@@ -42,7 +42,7 @@ SRX4713156      A4
 SRX4699481      B1
 SRX4692442      A3
 SRX4668629      ORE
-------------------------------
+------------------------------second download batch
 
 SRX4668167      B6
 SRX4661415      B4
