@@ -37,13 +37,12 @@ DSPR_NCBI_SRX_list.tsv
 -------------------------first download batch, Finished
 SRX4728152      AB8
 SRX4599325      A2
-SRX4722917      A6
 SRX4713156      A4
 SRX4699481      B1
 SRX4692442      A3
 SRX4668629      ORE
 ------------------------------second download batch
-
+SRX4722917      A6
 SRX4668167      B6
 SRX4661415      B4
 SRX4646796      A7
@@ -61,8 +60,13 @@ strain=`echo $i | gawk -F "\/" '{print $6}' 2>>/dev/null`
 echo $strain
 name=`basename $i | sed 's/.sra/.fastq.gz/'`
 echo $name
+nameSRR=`basename $i | sed 's/.sra//'`
+echo $nameSRR
+folder=/home/jenyuw/SV-project/raw/*_pacbio/${nameSRR}
+echo $folder
 fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/${strain}/${name}
 #with --stdout, the -O is ignored
+rm -r $folder
 done
 
 
@@ -89,11 +93,15 @@ echo $i
 name=`basename $i | sed 's/.sra/_ONT.fastq.gz/'`
 echo $name
 fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/PRJNA929424/${name}
+
 #with --stdout, the -O is ignored
 done
 
-for i in /home/jenyuw/SV-project/raw/PRJNA929424/SRR*/
+for i in /home/jenyuw/SV-project/raw/B1_pacbio/SRR*/*.fastq
 do
 echo $i
-rm -r $i
+SRR=`echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null`
+echo $SRR
+seq=/home/jenyuw/SV-project/raw/B1_pacbio/${SRR}/${SRR}.fastq
+pigz -p 8 -c ${seq} >> /home/jenyuw/SV-project/raw/B1_pacbio/B2-2_combine_pacbio.fastq.gz
 done

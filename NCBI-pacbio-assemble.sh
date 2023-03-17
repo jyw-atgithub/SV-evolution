@@ -1,66 +1,48 @@
 #!/bin/bash
+
+#SBATCH --job-name=DSPR-flye-assembly    ## Name of the job.
+#SBATCH -A ecoevo283       ## account to charge
+#SBATCH -p standard        ## partition/queue name
+#SBATCH --array=1-6   ## number of tasks to launch (wc -l prefixes.txt)
+#SBATCH --cpus-per-task=10    ## number of cores the job needs 
+
+
 ##pauvre is useful to check the sequencing stats (pauvre stats)
 
-
 ##pacbio_pipeline for ALL NCBI sequences
-
-## path
-ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
-
-raw="/home/jenyuw/SV-project/raw"
-raw_prj="/home/jenyuw/SV-project/raw/PRJNA929424"
-SRR_num="SRR232695"
-
-trimmed="/home/jenyuw/SV-project/result/trimmed"
-assemble="/home/jenyuw/SV-project/result/assemble"
-aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
-polishing="/home/jenyuw/SV-project/result/polishing"
-canu_proc="/home/jenyuw/SV-project/result/canu_processing"
-scaffold="/home/jenyuw/SV-project/result/scaffold"
+### on HPC3 !!!!###
+wd="/pub/jenyuw/SV-project-temp/"
+qc_report="/pub/jenyuw/SV-project-temp/qc_report"
 ## prep
 source ~/.bashrc
-nT=8
+nT=$SLURM_CPUS_PER_TASK
+echo "cpu number is $SLURM_CPUS_PER_TASK"
 
-conda activate longqc
+if [[ $SLURM_ARRAY_TASK_ID == 1 ]]
+then
+echo "yes"
+ls /pub/jenyuw/SV-project-temp/*_combine_pacbio.fastq.gz >/pub/jenyuw/SV-project-temp/pacbio_list.txt
+else
+echo "no need to list the file again"
+fi
 
-for i in $(ls ${raw_prj}/*_ONT.fastq.gz)
-    do
-    name=$(basename ${i}|sed s/".fastq.gz"//g)
-    echo $i 
-    echo $name
-    python /home/jenyuw/Software/LongQC/longQC.py sampleqc -p 10 -x ont-ligation -n 6000 \
-    -o ${qc_report}/${name}_longQC -s ${name} ${i}
-    done
+file=$(head -n $SLURM_ARRAY_TASK_ID /pub/jenyuw/SV-project-temp/pacbio_list.txt|tail -n 1)
+echo $file
+name=$(basename ${file}|sed s/"_combine_pacbio.fastq.gz"//g)
+echo $name
 
-conda activate qc 
+#LongQC report
+#conda activate longqc
+#python /pub/jenyuw/Software/LongQC-1.2.0c/longQC.py sampleqc -p ${nT} -x pb-sequel -n 6000 \
+#-o ${qc_report}/${name}_longQC -s ${name} ${file}
 
-for i in $(ls ${raw_prj}/*_ONT.fastq.gz)
-do
-    name=$(basename ${i}|sed s/".fastq.gz"//g)
-    echo $i 
-    echo $name
-# only chopper is enough for PacBio
-    cat ${trimmed}/${name}.abi.fastq | chopper -l 500 --headcrop 10 --tailcrop 10 --threads $nT  > ${trimmed}/${name}.trimmed.fastq
-    done
-
-#First assembly with Flye
 conda activate assemble
 
-for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
-    do
-    name=$(basename ${i}|sed s/".trimmed.fastq"//g)
-    echo $i 
-    echo $name
-    flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
-    done
+# only chopper is enough for PacBio
+#unpigz -p ${nT} -c ${file} | chopper -l 500 --headcrop 10 --tailcrop 10 -q 7 --threads ${nT} > ${wd}/${name}.trimmed.fastq 
 
+flye --threads $nT --genome-size 170m --pacbio-raw ${wd}/${name}.trimmed.fastq --out-dir ${wd}/${name}_Flye
+#flye does NOt accept stdin (/dev/stdin)
+#unpigz -p 4 -c A2_combine_pacbio.fastq.gz|head -n 10000 |grep "@" | sort | uniq -d
 
-conda activate post-proc
-
-##polishing
-
-
-
-
-
-
+flye --threads 6 --genome-size 170m --pacbio-raw B1-2_combine_pacbio.fastq.gz --out-dir ./B1_Flye
