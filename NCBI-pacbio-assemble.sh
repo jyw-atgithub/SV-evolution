@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --job-name=DSPR-flye-assembly    ## Name of the job.
-#SBATCH -A ecoevo283       ## account to charge
+#SBATCH -A jje_lab       ## account to charge
 #SBATCH -p standard        ## partition/queue name
 #SBATCH --array=1-14      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=10    ## number of cores the job needs 
+#SBATCH --cpus-per-task=32    ## number of cores the job needs 
 
 
 ##pauvre is useful to check the sequencing stats (pauvre stats)
@@ -43,11 +43,10 @@ conda activate assemble
 # because we merged the reads from different runs
 # need to use Seqkit to rename those duplicated IDs
 
-unpigz -p ${nT} -c ${file} | chopper -l 500 --headcrop 10 --tailcrop 10 -q 7 --threads ${nT} |\
-seqkit rename -j 8 |pigz -p 8 > ${wd}/${name}.trimmed.rn.fastq.gz 
-
+unpigz -p ${nT} -c ${file} | chopper -l 500 --headcrop 10 --tailcrop 10 --threads ${nT} |\
+#tee ${wd}/${name}.trimmed.fastq.gz|
+seqkit rename -j ${nT} |pigz -p ${nT} > ${wd}/${name}.trimmed.rn.fastq.gz 
+wait
 flye --threads $nT --genome-size 170m --pacbio-raw ${wd}/${name}.trimmed.rn.fastq.gz --out-dir ${wd}/${name}_Flye
 #flye does NOt accept stdin (/dev/stdin)
-#unpigz -p 4 -c A2_combine_pacbio.fastq.gz|head -n 10000 |grep "@" | sort | uniq -d
-
-
+#unpigz -p 4 -c A1_combine_pacbio.fastq.gz|head -n 10000 |grep "@" | sort | uniq -d
