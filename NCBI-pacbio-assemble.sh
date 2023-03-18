@@ -3,7 +3,7 @@
 #SBATCH --job-name=DSPR-flye-assembly    ## Name of the job.
 #SBATCH -A ecoevo283       ## account to charge
 #SBATCH -p standard        ## partition/queue name
-#SBATCH --array=1-6   ## number of tasks to launch (wc -l prefixes.txt)
+#SBATCH --array=1-14      ## number of tasks to launch (wc -l prefixes.txt)
 #SBATCH --cpus-per-task=10    ## number of cores the job needs 
 
 
@@ -38,11 +38,16 @@ echo $name
 
 conda activate assemble
 
-# only chopper is enough for PacBio
-#unpigz -p ${nT} -c ${file} | chopper -l 500 --headcrop 10 --tailcrop 10 -q 7 --threads ${nT} > ${wd}/${name}.trimmed.fastq 
+# Porechop-abi is not required for PacBio
+# "The input contain reads with duplicated IDs." ==> Error From Flye
+# because we merged the reads from different runs
+# need to use Seqkit to rename those duplicated IDs
 
-flye --threads $nT --genome-size 170m --pacbio-raw ${wd}/${name}.trimmed.fastq --out-dir ${wd}/${name}_Flye
+unpigz -p ${nT} -c ${file} | chopper -l 500 --headcrop 10 --tailcrop 10 -q 7 --threads ${nT} |\
+seqkit rename -j 8 |pigz -p 8 > ${wd}/${name}.trimmed.rn.fastq.gz 
+
+flye --threads $nT --genome-size 170m --pacbio-raw ${wd}/${name}.trimmed.rn.fastq.gz --out-dir ${wd}/${name}_Flye
 #flye does NOt accept stdin (/dev/stdin)
 #unpigz -p 4 -c A2_combine_pacbio.fastq.gz|head -n 10000 |grep "@" | sort | uniq -d
 
-flye --threads 6 --genome-size 170m --pacbio-raw B1-2_combine_pacbio.fastq.gz --out-dir ./B1_Flye
+

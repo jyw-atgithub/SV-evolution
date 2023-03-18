@@ -97,11 +97,11 @@ fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/ra
 #with --stdout, the -O is ignored
 done
 
-for i in /home/jenyuw/SV-project/raw/B1_pacbio/SRR*/*.fastq
+for i in /home/jenyuw/SV-project/raw/*_pacbio/SRR*.fastq.gz
 do
 echo $i
-SRR=`echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null`
-echo $SRR
-seq=/home/jenyuw/SV-project/raw/B1_pacbio/${SRR}/${SRR}.fastq
-pigz -p 8 -c ${seq} >> /home/jenyuw/SV-project/raw/B1_pacbio/B2-2_combine_pacbio.fastq.gz
+strain=`echo $i | gawk -F "\/" '{print $6}' 2>>/dev/null|sed 's/_pacbio//g'`
+echo $strain
+cat $i >> /home/jenyuw/SV-project/raw/${strain}_pacbio/${strain}_combine_pacbio.fastq.gz
 done
+
