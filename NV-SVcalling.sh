@@ -65,6 +65,9 @@ $j ${ref_genome} "${name}-cutesv.vcf" .
 sniffles --threads 20 \
 --reference ${ref_genome} \
 --input $j --vcf "${name}-sniffles.vcf" 
+#SVIM
+svim alignment --min_sv_size 50 --sample ${name} \
+${SVs}/${name}-SVIM $j ${ref_genome}
 done
 
 
