@@ -14,9 +14,7 @@ strain=${file%.bam}
 echo $strain
 #call SNPs, single-thread
 freebayes -f $ref -g 200 $j >./snp/"$strain"_freebayes.vcf
-#call SNPs, PARALLEL. NOT working now
-#freebayes-parallel <(fasta_generate_regions.py dmel-all-chromosome-r6.46.fasta.fai 100000) 36 \
-#-f $ref -g 200 $j>"$strain"_freebayes.vcf
+
 done
 echo "SNPs are called!"
 
@@ -54,6 +52,7 @@ n_thread=60
 ref=/home/jenyuw/Reference_genome/Dmel6/dmel-all-chromosome-r6.46.fasta
 ref_fai=/home/jenyuw/Reference_genome/Dmel6/dmel-all-chromosome-r6.46.fasta.fai
 
+#file location: /home/jenyuw/DSPR_snp/raw_fq/together
 # index of bam file is required for freebayes-parallel
 samtools index -@ $n_thread -b together.bam
 
@@ -64,6 +63,7 @@ freebayes-parallel <(fasta_generate_regions.py $ref 100000) $n_thread -f $ref -g
 bgzip -k -@ $n_thread parr_out.vcf
 tabix -p vcf parr_out.vcf.gz
 rtg vcfstats parr_out.vcf.gz
+#-d --min-read-depth=INT, -q --min-quality=FLOAT
 rtg vcffilter --all-samples -d 10 -q 30 -i parr_out.vcf.gz -o "-"|\
 vcffilter -f "QUAL > 1 & QUAL / AO > 10 & SAF > 0 & SAR > 0 & RPR > 1 & RPL > 1"|\
 bgzip > parr_out.2filtered.vcf.gz
@@ -71,3 +71,16 @@ bgzip > parr_out.2filtered.vcf.gz
 snpEff -v BDGP6.32.105 parr_out.2filtered.vcf.gz >parr_out.annotated.vcf
 
 ##################
+# filtering with new criteria
+bcftools filter -i ' QUAL >= 30 && INFO/DP > 20 && INFO/DP < 1000 &&  QUAL / INFO/AO > 10 && SAF > 0 && SAR > 0 && RPR > 1 && RPL > 1' \
+--SnpGap 10 --threads 8 -r 2L,2R,3L,3R,4,X,Y  \
+-o - parr_out.vcf.gz |\
+bcftools filter --threads 8 -i ' MQM >= 30 && MQMR >= 30 ' -o - - |\
+bcftools filter --threads 8 -S . -e 'FMT/DP<3 | FMT/GQ<20' -o - - |\
+bcftools filter --threads 8 -e 'AC==0 || AC==AN' --SnpGap 10 -o - - |\
+bcftools view --threads 8 -m2 -M2 -v snps -O z -o all_variants_filtered.vcf.gz
+
+jenyuw@hydra:~/DSPR_snp/raw_fq/together$ bcftools view -H all_variants_filtered.vcf.gz | wc -l
+1476844
+[jenyuw@login-i15:/pub/jenyuw/EE283/DNAseq/results/SNP] $bcftools view -H all_variants_filtered.vcf.gz |wc -l
+50474
