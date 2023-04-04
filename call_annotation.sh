@@ -84,3 +84,5 @@ jenyuw@hydra:~/DSPR_snp/raw_fq/together$ bcftools view -H all_variants_filtered.
 1476844
 [jenyuw@login-i15:/pub/jenyuw/EE283/DNAseq/results/SNP] $bcftools view -H all_variants_filtered.vcf.gz |wc -l
 50474
+jenyuw@hydra:~/DSPR_snp/official$ bcftools view -H --threads 4 DSPR.r6.SNPs.vcf.gz|wc -l
+1776091
