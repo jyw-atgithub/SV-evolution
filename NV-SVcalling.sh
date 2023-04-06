@@ -131,7 +131,8 @@ bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
 
 
 bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
--i 'QUAL >= 10 && FILTER = "PASS"'  -O v -o - nv107-SVIM.sort.vcf.gz | sed 's/SVTYPE=DUP:INT/SVTYPE=DUP/g' |\
+-i 'QUAL >= 10 && FILTER = "PASS"'  -O v -o - nv107-SVIM.sort.vcf.gz |\
+ sed 's/SVTYPE=DUP:INT/SVTYPE=DUP/g ; s/SVTYPE=DUP:TANDEM/SVTYPE=DUP/g ' |\
 bcftools view --thread 8 -O z -o nv107-SVIM.filtered.vcf.gz
 
 
