@@ -1,0 +1,15 @@
+{
+    "reference": "/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta",
+    "asm_pattern": "/home/jenyuw/SV-project/result/polishing/nv107.polished.pilon.1.fasta",
+    "map_threads": 20,
+    "min_trim_tig_len": 1000,
+    "aligner": "minimap2",
+    "inv_region_limit": 1200000,
+    "inv_sig_merge_flank":500,
+    "inv_sig_insdel_merge_flank": 2000,
+    "inv_sig_cluster_svlen_min":10,
+    "minimap2_params": "-x asm20 -m 10000 -z 10000,50 -r 50000 --end-bonus=100 -O 5,56 -E 4,1 -B 5",
+    
+
+  }
+

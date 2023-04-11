@@ -37,11 +37,15 @@ ${SVs}/${name}-svim-asm ${aligned_bam}/${name}.Flye-ref.sort.bam ${ref_genome}
 
 #syri
 
-#PAV
-
-#
-
 done
+
+## Assembly based
+## PAV in singularity
+## requires a clean folder and a config.json
+singularity run --bind "$(pwd):$(pwd)" --writable-tmpfs library://becklab/pav/pav:latest -c 16
+
+## non-default settings of of the config.json: "map_threads"[12], "inv_sig_cluster_svlen_min"[4]
+
 
 
 ## Mapping-based, so we have to map the "trimmed&filtered" ONT reads to the reference genome.
