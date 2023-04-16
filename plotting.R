@@ -3,23 +3,24 @@ library(ggplot2)
 library(VennDiagram)
 
 setwd("/Users/Oscar/Desktop/Emerson_Lab_Work/SV-project")
-tab <- read.table("stats-nv107.3.tsv", header = FALSE)
+tab <- read.table("stats-nv107.tsv", header = FALSE)
 colnames(tab) <- c("prog", "chr", "start", "type", "length")
 levels(as.factor(tab$prog))
 levels(as.factor(tab$type))
 
-tab = tab %>% mutate(abs_length=abs(as.numeric(tab$length))) %>% 
-  mutate(new_type=recode(type,"DUP:INT"="DUP", "DUP:TANDEM"="DUP"))
+tab = tab %>% mutate(abs_length=abs(as.numeric(tab$length))) 
+# %>% mutate(new_type=recode(type,"DUP:INT"="DUP", "DUP:TANDEM"="DUP"))
+#not required
 
 png("2_1-sniffles_count.png", width = 1200, height = 1200)
-p1 <- ggplot(data=tab%>%filter(prog=="sniffles")) + geom_bar(mapping=aes(x=new_type), fill = 'orange3')+
+p1 <- ggplot(data=tab%>%filter(prog=="sniffles")) + geom_bar(mapping=aes(x=type), fill = 'orange3')+
   scale_y_sqrt()+labs(title="sniffles", x ="SV type", y = "Count")+
   theme(text = element_text(size = 30)) + scale_y_continuous(limits = c(0,6000)) 
 p1 
 dev.off()
 
 png("2_2-cuteSV_count.png", width = 1200, height = 1200)
-p2 <- ggplot(data=tab%>%filter(prog=="cuteSV")) + geom_bar(mapping=aes(x=new_type), fill = 'green4')+
+p2 <- ggplot(data=tab%>%filter(prog=="cuteSV")) + geom_bar(mapping=aes(x=type), fill = 'green4')+
   scale_y_sqrt() +labs(title="cuteSV", x ="SV type", y = "Count")+
   theme(text = element_text(size = 30)) + scale_y_continuous(limits = c(0,6000)) 
 p2
@@ -52,10 +53,24 @@ p<-ggplot(data=tab2) +
 p
 dev.off()
 
-t <- read.table("sample_merged_overlapp5.txt")
-venn.diagram(list(cuteSV=which(t[,1]==1), sniffles=which(t[,2]==1), SVIM=which(t[,3]==1)) , 
+t005 <- read.table("sample_merged_overlapp.005.txt")
+venn.diagram(list(cuteSV=which(t005[,1]==1), sniffles=which(t005[,2]==1), SVIM=which(t005[,3]==1)) , 
              euler.d=TRUE, scaled=TRUE, 
              fill = c("gray", "orange" ,"blue") , alpha = c(0.5, 0.5, 0.5), 
              cex = 2, lty =0,
-             imagetype = "png", filename = "my_sample_overlapp.png", disable.logging = TRUE)
+             imagetype = "png", filename = "my_sample_overlapp.005.png", disable.logging = TRUE)
+
+t01 <- read.table("sample_merged_overlapp.01.txt")
+venn.diagram(list(cuteSV=which(t01[,1]==1), sniffles=which(t01[,2]==1), SVIM=which(t01[,3]==1)) , 
+             euler.d=TRUE, scaled=TRUE, 
+             fill = c("gray", "orange" ,"blue") , alpha = c(0.5, 0.5, 0.5), 
+             cex = 2, lty =0,
+             imagetype = "png", filename = "my_sample_overlapp.01.png", disable.logging = TRUE)
+
+t1000 <- read.table("sample_merged_overlapp.1000.txt")
+venn.diagram(list(cuteSV=which(t1000[,1]==1), sniffles=which(t1000[,2]==1), SVIM=which(t1000[,3]==1)) , 
+             euler.d=TRUE, scaled=TRUE, 
+             fill = c("gray", "orange" ,"blue") , alpha = c(0.5, 0.5, 0.5), 
+             cex = 2, lty =0,
+             imagetype = "png", filename = "my_sample_overlapp.1000.png", disable.logging = TRUE)
 
