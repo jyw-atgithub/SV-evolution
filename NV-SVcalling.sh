@@ -22,24 +22,32 @@ conda activate sv-calling
 SKIP
 
 ## Assembly based
-## suggestion from syri: minimap2 -ax asm5 --eqx
+#### We need to use the scaffold!!####
+## suggestion from syri: minimap2 -ax asm5 --eqx, --eqx is required
 ## install syri locally. Conda failed. "python3 setup.py install --user"
+
+for i in $(ls ${scaffold}/nv*/ragtag.scaffold.fasta)
+do
+echo $i
+name=$(echo $i|awk -F "/" '{print $7}')
+echo ${name}
+
+minimap2 -t ${nT} -a -x asm5 --cs --eqx \
+${ref_genome} ${i} \
+|samtools view -b -h -@ ${nT} -o -|samtools sort -@ ${nT} -o ${aligned_bam}/${name}.scfd-ref.sort.bam
+samtools index ${aligned_bam}/${name}.scfd-ref.sort.bam
+
+#SVIM-asm
+echo "calling SVs of ${name} wiyh SVIM-asm"
+svim-asm haploid --sample ${name} \
+${SVs}/${name}-svim-asm ${aligned_bam}/${name}.scfd-ref.sort.bam ${ref_genome}
+
+done
+
+
 for i in $(ls ${polishing}/nv*.polished.pilon.1.fasta)
 do
 cd ${SVs}
-
-name=$(basename $i | sed s/.polished.pilon.1.fasta//g)
-echo "mapping ${name} polished assembly to reference genome"
-minimap2 -t ${nT} -a -x asm5 --cs --eqx \
-${ref_genome} ${i} \
-|samtools view -b -h -@ ${nT} -o -|samtools sort -@ ${nT} -o ${aligned_bam}/${name}.Flye-ref.sort.bam
-samtools index ${aligned_bam}/${name}.Flye-ref.sort.bam
-
-#SVIM-asm
-echo "calling SVs of ${name} wiht assembly based methods"
-svim-asm haploid --sample ${name} \
-${SVs}/${name}-svim-asm ${aligned_bam}/${name}.Flye-ref.sort.bam ${ref_genome}
-
 #syri
 syri -F B -c ${aligned_bam}/${name}.Flye-ref.sort.bam -r ${ref_genome} \
 -q ${i} --dir ${SVs}/syri-result --prefix ${name} --samplename ${name}
@@ -47,12 +55,26 @@ syri -F B -c ${aligned_bam}/${name}.Flye-ref.sort.bam -r ${ref_genome} \
 # smartie-sv
 done
 
-bam="/home/jenyuw/SV-project/result/aligned_bam/nv107.Flye-ref.sort.bam"
+bam="/home/jenyuw/SV-project/result/aligned_bam/nv107.scfd-ref.sort.bam"
 ref="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
-asm="/home/jenyuw/SV-project/result/polishing/nv107.polished.pilon.1.fasta"
+asm="/home/jenyuw/SV-project/result/scaffold/nv107/ragtag.scaffold.fasta"
 syri -F B -c ${bam} -r ${ref} -q ${asm} --dir /home/jenyuw/SV-project/temp2 --prefix nv107 --samplename nv107
 
 fixchr -F B -c ${bam} -r ${ref} -q ${asm}
+
+
+
+sed 's/"_RagTag"//g' qry.filtered.fa > qry.filtered.rn.fa
+sed 's/>/>chr/g' ref.filtered.fa > ref.filtered.rn.fa
+
+minimap2 -t 10 -a -x asm5 --cs --eqx ref.filtered.rn.fa qry.filtered.rn.fa |\
+samtools view -b -h -@ 10 -o -|samtools sort -@ 10 -o nv107.filtered.scfd-ref.sort.bam
+samtools index nv107.filtered.scfd-ref.sort.bam
+
+syri -F B -c nv107.filtered.scfd-ref.sort.bam -r ref.filtered.rn.fa -q qry.filtered.rn.fa \
+--dir /home/jenyuw/SV-project/temp2 --prefix nv107 --samplename nv107
+
+grep -v ^#  nv107syri.vcf | gawk '{print $3}' | cut -c 1-3 |sort |uniq -c
 
 ## PAV in singularity
 ## requires a clean folder and a config.json
