@@ -100,7 +100,6 @@ samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-ref.sort.bam
 samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-ref.sort.bam
 done
 
-conda activate sv-calling
 
 for j in $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
 do

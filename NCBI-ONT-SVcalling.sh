@@ -1,0 +1,70 @@
+#!/bin/bash
+# working on PRJNA929424
+
+## path
+ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
+#raw="/home/jenyuw/SV-project/raw"
+raw_prj="/home/jenyuw/SV-project/raw/PRJNA929424"
+
+trimmed="/home/jenyuw/SV-project/result/trimmed"
+assemble="/home/jenyuw/SV-project/result/assemble"
+aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
+polishing="/home/jenyuw/SV-project/result/polishing"
+canu_proc="/home/jenyuw/SV-project/result/canu_processing"
+scaffold="/home/jenyuw/SV-project/result/scaffold"
+SVs="/home/jenyuw/SV-project/result/SVs"
+merged_SVs="/home/jenyuw/SV-project/result/merged_SVs"
+
+## prep
+source ~/.bashrc
+nT=20
+
+# on THOTH
+conda activate sv-calling
+
+## Mapping-based, so we have to map the "trimmed&filtered" ONT reads to the reference genome.
+
+for i in $(ls ${trimmed}/SRR*_ONT.trimmed.fastq)
+do
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+echo "mapping ${name} trimmed reads to reference genome"
+
+minimap2 -t ${nT} -a -x map-ont \
+${ref_genome} $i |\
+samtools view -b -h -@ ${nT} -o - |\
+samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-ref.sort.bam
+samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-ref.sort.bam
+done
+
+for j in $(ls ${aligned_bam}/SRR*_ONT.trimmed-ref.sort.bam)
+do
+name=$(basename ${j}|sed s/".trimmed-ref.sort.bam"//g)
+echo "calling SVs of ${name} wiht mapping based methods"
+cd ${SVs}
+#sniffles
+sniffles --threads ${nT} --allow-overwrite --sample-id ${name}-snif \
+--minsupport 10 \
+--minsvlen 50 --mapq 20 --min-alignment-length 500 \
+--cluster-merge-pos 270 \
+--max-del-seq-len 100000 \
+--reference ${ref_genome} \
+--input $j --vcf "${name}-sniffles.vcf"
+
+#cuteSV #--max_size was not recognized. only -L worked
+cuteSV --threads ${nT} --genotype --sample ${name}-cute \
+--min_support 10 \
+--min_size 50 --min_mapq 20 --min_read_len 500 \
+--merge_del_threshold 270 --merge_ins_threshold 270 \ 
+-L 100000 \
+--max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
+$j ${ref_genome} "${name}-cutesv.vcf" .
+
+#SVIM
+svim alignment --sample ${name}-svim \
+--min_mapq 20 --min_sv_size 50 \
+--max_sv_size 100000 \
+--distance_normalizer 900 --cluster_max_distance 0.3 \
+${SVs}/${name}-SVIM $j ${ref_genome}
+
+cp ${SVs}/${name}-SVIM/variants.vcf ${SVs}/${name}-SVIM.vcf
+done
