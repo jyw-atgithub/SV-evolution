@@ -12,6 +12,7 @@ polishing="/home/jenyuw/SV-project/result/polishing"
 canu_proc="/home/jenyuw/SV-project/result/canu_processing"
 scaffold="/home/jenyuw/SV-project/result/scaffold"
 SVs="/home/jenyuw/SV-project/result/SVs"
+merged_SVs="/home/jenyuw/SV-project/result/merged_SVs"
 ## prep
 source ~/.bashrc
 nT=20
@@ -155,13 +156,47 @@ SKIP
 ## SVIM report DUP:INT and DUP:TANDEM, while cuteSV & sniffles only report DUP
 ## SVIM does NOT report SVLEN for INV, but cuteSV and sniffles do.
 
-bgzip -@ 8  -k
+#filter_merge.sh
+
+printf "" > ${SVs}/sample.namelist.txt
+for i in $(ls ${SVs}/nv*.vcf)
+do
+name=$(basename $i | gawk -F "-" '{print $1}')
+prog=$(basename $i | gawk -F "-" '{print $2}'|sed 's/.vcf//g')
+echo $name $prog
+bgzip -f -@ ${nT} -k ${i}
+# Only the vcf from SVIM is not sorted while others are sorted. We sort all because of convenience.
+bcftools sort -O z -o ${SVs}/${name}-${prog}.sort.vcf.gz ${i}
+tabix -f -p vcf ${SVs}/${name}-${prog}.sort.vcf.gz
+
+bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
+-i 'QUAL >= 10 && FILTER = "PASS"'  -O v -o - ${SVs}/${name}-${prog}.sort.vcf.gz |\
+sed 's/SVTYPE=DUP:INT/SVTYPE=DUP/g ; s/SVTYPE=DUP:TANDEM/SVTYPE=DUP/g ' |\
+bcftools view --thread 8 -O z -o ${SVs}/${name}-${prog}.filtered.vcf.gz
+echo ${name} >> ${SVs}/sample.namelist.txt
+bgzip -f -dk ${SVs}/${name}-${prog}.filtered.vcf.gz
+done
+
+cat ${SVs}/sample.namelist.txt | sort | uniq >${SVs}/sample.namelist.u.txt
+
+while read i
+do
+echo ${i}
+#name=$(echo ${i})
+ls ${SVs}/${i}-*.filtered.vcf >sample_files
+SURVIVOR merge sample_files 0.05 3 1 0 1 50 ${merged_SVs}/${i}.consensus.vcf
+done <${SVs}/sample.namelist.u.txt
+
+
+
+
+bgzip -@ 8 -k
 tabix -p vcf -0
 bcftools sort -O z -o nv107-SVIM.sort.vcf.gz nv107-SVIM.vcf.gz
 #bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
 #-i 'QUAL >= 10  && ( SVLEN >= 50 || SVLEN <= -50 || SVTYPE = "BND")' -O z -o nv107-cutesv.filtered.vcf.gz nv107-cutesv.vcf.gz
 
-
+.   
 bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
 -i 'QUAL >= 10 && FILTER = "PASS"' -O z -o nv107-cutesv.filtered.vcf.gz nv107-cutesv.vcf.gz
 
@@ -195,3 +230,6 @@ SURVIVOR merge sample_files 1000 2 1 1 0 30 sample_merged.1000.vcf
 perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.005.vcf | sed -e 's/\(.\)/\1 /g' > sample_merged_overlapp.005.txt
 perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.01.vcf | sed -e 's/\(.\)/\1 /g' > sample_merged_overlapp.01.txt
 perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.1000.vcf | sed -e 's/\(.\)/\1 /g' > sample_merged_overlapp.1000.txt
+
+SURVIVOR merge sample_files 0.05 3 1 0 1 50 sample_merged.consensus.vcf
+bedtools intersect -a sample_merged.consensus.vcf  -b nv107-sniffles.vcf.gz
