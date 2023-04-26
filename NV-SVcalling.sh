@@ -12,6 +12,7 @@ polishing="/home/jenyuw/SV-project/result/polishing"
 canu_proc="/home/jenyuw/SV-project/result/canu_processing"
 scaffold="/home/jenyuw/SV-project/result/scaffold"
 SVs="/home/jenyuw/SV-project/result/SVs"
+merged_SVs="/home/jenyuw/SV-project/result/merged_SVs"
 ## prep
 source ~/.bashrc
 nT=20
@@ -22,24 +23,32 @@ conda activate sv-calling
 SKIP
 
 ## Assembly based
-## suggestion from syri: minimap2 -ax asm5 --eqx
+#### We need to use the scaffold!!####
+## suggestion from syri: minimap2 -ax asm5 --eqx, --eqx is required
 ## install syri locally. Conda failed. "python3 setup.py install --user"
+
+for i in $(ls ${scaffold}/nv*/ragtag.scaffold.fasta)
+do
+echo $i
+name=$(echo $i|awk -F "/" '{print $7}')
+echo ${name}
+
+minimap2 -t ${nT} -a -x asm5 --cs --eqx \
+${ref_genome} ${i} \
+|samtools view -b -h -@ ${nT} -o -|samtools sort -@ ${nT} -o ${aligned_bam}/${name}.scfd-ref.sort.bam
+samtools index ${aligned_bam}/${name}.scfd-ref.sort.bam
+
+#SVIM-asm
+echo "calling SVs of ${name} wiyh SVIM-asm"
+svim-asm haploid --sample ${name} \
+${SVs}/${name}-svim-asm ${aligned_bam}/${name}.scfd-ref.sort.bam ${ref_genome}
+
+done
+
+
 for i in $(ls ${polishing}/nv*.polished.pilon.1.fasta)
 do
 cd ${SVs}
-
-name=$(basename $i | sed s/.polished.pilon.1.fasta//g)
-echo "mapping ${name} polished assembly to reference genome"
-minimap2 -t ${nT} -a -x asm5 --cs --eqx \
-${ref_genome} ${i} \
-|samtools view -b -h -@ ${nT} -o -|samtools sort -@ ${nT} -o ${aligned_bam}/${name}.Flye-ref.sort.bam
-samtools index ${aligned_bam}/${name}.Flye-ref.sort.bam
-
-#SVIM-asm
-echo "calling SVs of ${name} wiht assembly based methods"
-svim-asm haploid --sample ${name} \
-${SVs}/${name}-svim-asm ${aligned_bam}/${name}.Flye-ref.sort.bam ${ref_genome}
-
 #syri
 syri -F B -c ${aligned_bam}/${name}.Flye-ref.sort.bam -r ${ref_genome} \
 -q ${i} --dir ${SVs}/syri-result --prefix ${name} --samplename ${name}
@@ -47,12 +56,26 @@ syri -F B -c ${aligned_bam}/${name}.Flye-ref.sort.bam -r ${ref_genome} \
 # smartie-sv
 done
 
-bam="/home/jenyuw/SV-project/result/aligned_bam/nv107.Flye-ref.sort.bam"
+bam="/home/jenyuw/SV-project/result/aligned_bam/nv107.scfd-ref.sort.bam"
 ref="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
-asm="/home/jenyuw/SV-project/result/polishing/nv107.polished.pilon.1.fasta"
+asm="/home/jenyuw/SV-project/result/scaffold/nv107/ragtag.scaffold.fasta"
 syri -F B -c ${bam} -r ${ref} -q ${asm} --dir /home/jenyuw/SV-project/temp2 --prefix nv107 --samplename nv107
 
 fixchr -F B -c ${bam} -r ${ref} -q ${asm}
+
+
+
+sed 's/"_RagTag"//g' qry.filtered.fa > qry.filtered.rn.fa
+sed 's/>/>chr/g' ref.filtered.fa > ref.filtered.rn.fa
+
+minimap2 -t 10 -a -x asm5 --cs --eqx ref.filtered.rn.fa qry.filtered.rn.fa |\
+samtools view -b -h -@ 10 -o -|samtools sort -@ 10 -o nv107.filtered.scfd-ref.sort.bam
+samtools index nv107.filtered.scfd-ref.sort.bam
+
+syri -F B -c nv107.filtered.scfd-ref.sort.bam -r ref.filtered.rn.fa -q qry.filtered.rn.fa \
+--dir /home/jenyuw/SV-project/temp2 --prefix nv107 --samplename nv107
+
+grep -v ^#  nv107syri.vcf | gawk '{print $3}' | cut -c 1-3 |sort |uniq -c
 
 ## PAV in singularity
 ## requires a clean folder and a config.json
@@ -133,13 +156,47 @@ SKIP
 ## SVIM report DUP:INT and DUP:TANDEM, while cuteSV & sniffles only report DUP
 ## SVIM does NOT report SVLEN for INV, but cuteSV and sniffles do.
 
-bgzip -@ 8  -k
+#filter_merge.sh
+
+printf "" > ${SVs}/sample.namelist.txt
+for i in $(ls ${SVs}/nv*.vcf)
+do
+name=$(basename $i | gawk -F "-" '{print $1}')
+prog=$(basename $i | gawk -F "-" '{print $2}'|sed 's/.vcf//g')
+echo $name $prog
+bgzip -f -@ ${nT} -k ${i}
+# Only the vcf from SVIM is not sorted while others are sorted. We sort all because of convenience.
+bcftools sort -O z -o ${SVs}/${name}-${prog}.sort.vcf.gz ${i}
+tabix -f -p vcf ${SVs}/${name}-${prog}.sort.vcf.gz
+
+bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
+-i 'QUAL >= 10 && FILTER = "PASS"'  -O v -o - ${SVs}/${name}-${prog}.sort.vcf.gz |\
+sed 's/SVTYPE=DUP:INT/SVTYPE=DUP/g ; s/SVTYPE=DUP:TANDEM/SVTYPE=DUP/g ' |\
+bcftools view --thread 8 -O z -o ${SVs}/${name}-${prog}.filtered.vcf.gz
+echo ${name} >> ${SVs}/sample.namelist.txt
+bgzip -f -dk ${SVs}/${name}-${prog}.filtered.vcf.gz
+done
+
+cat ${SVs}/sample.namelist.txt | sort | uniq >${SVs}/sample.namelist.u.txt
+
+while read i
+do
+echo ${i}
+#name=$(echo ${i})
+ls ${SVs}/${i}-*.filtered.vcf >sample_files
+SURVIVOR merge sample_files 0.05 3 1 0 1 50 ${merged_SVs}/${i}.consensus.vcf
+done <${SVs}/sample.namelist.u.txt
+
+
+
+
+bgzip -@ 8 -k
 tabix -p vcf -0
 bcftools sort -O z -o nv107-SVIM.sort.vcf.gz nv107-SVIM.vcf.gz
 #bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
 #-i 'QUAL >= 10  && ( SVLEN >= 50 || SVLEN <= -50 || SVTYPE = "BND")' -O z -o nv107-cutesv.filtered.vcf.gz nv107-cutesv.vcf.gz
 
-
+.   
 bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
 -i 'QUAL >= 10 && FILTER = "PASS"' -O z -o nv107-cutesv.filtered.vcf.gz nv107-cutesv.vcf.gz
 
@@ -173,3 +230,6 @@ SURVIVOR merge sample_files 1000 2 1 1 0 30 sample_merged.1000.vcf
 perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.005.vcf | sed -e 's/\(.\)/\1 /g' > sample_merged_overlapp.005.txt
 perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.01.vcf | sed -e 's/\(.\)/\1 /g' > sample_merged_overlapp.01.txt
 perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.1000.vcf | sed -e 's/\(.\)/\1 /g' > sample_merged_overlapp.1000.txt
+
+SURVIVOR merge sample_files 0.05 3 1 0 1 50 sample_merged.consensus.vcf
+bedtools intersect -a sample_merged.consensus.vcf  -b nv107-sniffles.vcf.gz
