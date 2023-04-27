@@ -186,6 +186,15 @@ ls ${SVs}/${i}-*.filtered.vcf >sample_files
 SURVIVOR merge sample_files 0.05 3 1 0 1 50 ${merged_SVs}/${i}.consensus.vcf
 done <${SVs}/sample.namelist.u.txt
 
+for i in $(ls ${merged_SVs}/*.consensus.vcf)
+do
+echo $i 
+name=$(basename ${i} | gawk -F "." '{print $1}')
+bcftools view --threads ${nT} --samples ${name}-cute ${i} -O v -o ${name}.consensus.cut.vcf
+done 
+
+ls ${merged_SVs}/*.consensus.cut.vcf >sample.con.list.txt
+SURVIVOR merge sample.con.list.txt 0.05 1 1 0 1 50 all.consensus.vcf
 
 
 
@@ -231,4 +240,4 @@ perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.01.vcf | sed -e 's
 perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/'  sample_merged.1000.vcf | sed -e 's/\(.\)/\1 /g' > sample_merged_overlapp.1000.txt
 
 SURVIVOR merge sample_files 0.05 3 1 0 1 50 sample_merged.consensus.vcf
-bedtools intersect -a sample_merged.consensus.vcf  -b nv107-sniffles.vcf.gz
+#bedtools intersect -a sample_merged.consensus.vcf  -b nv107-sniffles.vcf.gz

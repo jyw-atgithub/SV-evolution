@@ -12,7 +12,7 @@
 
 ##pacbio_pipeline for ALL NCBI sequences
 ### on HPC3 !!!!###
-wd="/pub/jenyuw/SV-project-temp/"
+wd="/pub/jenyuw/SV-project-temp"
 qc_report="/pub/jenyuw/SV-project-temp/qc_report"
 ## prep
 source ~/.bashrc
@@ -48,6 +48,8 @@ unpigz -p ${nT} -c ${file} | chopper -l 600 --headcrop 46 --tailcrop 46 --thread
 #tee ${wd}/${name}.trimmed.fastq.gz|
 seqkit rename -j ${nT} |pigz -p ${nT} > ${wd}/${name}.trimmed.rn.fastq.gz 
 wait
-flye --threads $nT --genome-size 170m --asm-coverage 90 --pacbio-raw ${wd}/${name}.trimmed.rn.fastq.gz --out-dir ${wd}/${name}_Flye
-#flye does NOt accept stdin (/dev/stdin)
+flye --threads $nT --genome-size 170m --asm-coverage 90 --pacbio-raw ${wd}/${name}.trimmed.rn.fastq.gz \
+--out-dir ${wd}/${name}_Flye
+
+#flye does NOT accept stdin (/dev/stdin)
 #unpigz -p 4 -c A1_combine_pacbio.fastq.gz|head -n 10000 |grep "@" | sort | uniq -d

@@ -41,14 +41,6 @@ do
 name=$(basename ${j}|sed s/".trimmed-ref.sort.bam"//g)
 echo "calling SVs of ${name} wiht mapping based methods"
 cd ${SVs}
-#sniffles
-sniffles --threads ${nT} --allow-overwrite --sample-id ${name}-snif \
---minsupport 10 \
---minsvlen 50 --mapq 20 --min-alignment-length 500 \
---cluster-merge-pos 270 \
---max-del-seq-len 100000 \
---reference ${ref_genome} \
---input $j --vcf "${name}-sniffles.vcf"
 
 #cuteSV #--max_size was not recognized. only -L worked
 cuteSV --threads ${nT} --genotype --sample ${name}-cute \
@@ -57,7 +49,16 @@ cuteSV --threads ${nT} --genotype --sample ${name}-cute \
 --merge_del_threshold 270 --merge_ins_threshold 270 \ 
 -L 100000 \
 --max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
-$j ${ref_genome} "${name}-cutesv.vcf" .
+ ${j} ${ref_genome} ${name}-cutesv.vcf ${SVs}
+
+#sniffles
+sniffles --threads ${nT} --allow-overwrite --sample-id ${name}-snif \
+--minsupport 10 \
+--minsvlen 50 --mapq 20 --min-alignment-length 500 \
+--cluster-merge-pos 270 \
+--max-del-seq-len 100000 \
+--reference ${ref_genome} \
+--input $j --vcf "${name}-sniffles.vcf"
 
 #SVIM
 svim alignment --sample ${name}-svim \
@@ -68,3 +69,33 @@ ${SVs}/${name}-SVIM $j ${ref_genome}
 
 cp ${SVs}/${name}-SVIM/variants.vcf ${SVs}/${name}-SVIM.vcf
 done
+
+
+printf "" > ${SVs}/sample.namelist.txt
+for i in $(ls ${SVs}/SRR*.vcf)
+do
+name=$(basename $i | gawk -F "-" '{print $1}')
+prog=$(basename $i | gawk -F "-" '{print $2}'|sed 's/.vcf//g')
+echo $name $prog
+bgzip -f -@ ${nT} -k ${i}
+# Only the vcf from SVIM is not sorted while others are sorted. We sort all because of convenience.
+bcftools sort -O z -o ${SVs}/${name}-${prog}.sort.vcf.gz ${i}
+tabix -f -p vcf ${SVs}/${name}-${prog}.sort.vcf.gz
+
+bcftools view --threads 8 -r 2L,2R,3L,3R,4,X,Y \
+-i 'QUAL >= 10 && FILTER = "PASS"'  -O v -o - ${SVs}/${name}-${prog}.sort.vcf.gz |\
+sed 's/SVTYPE=DUP:INT/SVTYPE=DUP/g ; s/SVTYPE=DUP:TANDEM/SVTYPE=DUP/g ' |\
+bcftools view --thread 8 -O z -o ${SVs}/${name}-${prog}.filtered.vcf.gz
+echo ${name} >> ${SVs}/sample.namelist.txt
+bgzip -f -dk ${SVs}/${name}-${prog}.filtered.vcf.gz
+done
+
+cat ${SVs}/sample.namelist.txt | sort | uniq >${SVs}/sample.namelist.u.txt
+
+while read i
+do
+echo "we are merging SVs ${i} called by 3 programs"
+#name=$(echo ${i})
+ls ${SVs}/${i}-*.filtered.vcf >sample_files
+SURVIVOR merge sample_files 0.05 3 1 0 1 50 ${merged_SVs}/${i}.consensus.vcf
+done <${SVs}/sample.namelist.u.txt
