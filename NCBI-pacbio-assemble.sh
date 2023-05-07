@@ -45,7 +45,7 @@ conda activate assemble
 # need to use Seqkit to rename those duplicated IDs
 
 unpigz -p ${nT} -c ${file} | chopper -l 600 --headcrop 46 --tailcrop 46 --threads ${nT} |\
-#tee ${wd}/${name}.trimmed.fastq.gz|
+#tee ${wd}/${name}.trimmed.fastq.gz |
 seqkit rename -j ${nT} |pigz -p ${nT} > ${wd}/${name}.trimmed.rn.fastq.gz 
 wait
 flye --threads $nT --genome-size 170m --asm-coverage 90 --pacbio-raw ${wd}/${name}.trimmed.rn.fastq.gz \

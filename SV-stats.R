@@ -69,7 +69,7 @@ ncol(vcf)
 
 container <- data.frame(matrix(ncol=11, nrow=0))
 for (chr in total_chr){
-  for (what.to.filter in c("INS","DEL","DUP","INV", "BND", "*")){
+  for (what.to.filter in c("INS","DEL","DUP","INV", "TRA", "*")){
     #print(chr)
     ##Use the INFO Tag, not the ID. There are few incongruence though
     vcf.part = vcf %>% filter(CHROM == chr) #calculate the window first 
