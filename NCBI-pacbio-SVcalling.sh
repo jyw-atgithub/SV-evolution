@@ -40,16 +40,15 @@ for j in $(ls ${aligned_bam}/{A{1..7},AB8,B{1,2,3,4,6},ORE}.trimmed-ref.sort.bam
 do
 name=$(basename ${j}|sed s/".trimmed-ref.sort.bam"//g)
 echo "calling SVs of ${name} wiht mapping based methods"
-done
+
 cd ${SVs}
 
 #cuteSV #--max_size was not recognized. only -L worked
 ## Remember to check the cuteSV setting, which needs to match the sequencing tech!!!
-cuteSV --threads ${nT} --genotype --sample ${name}-cute \
+cuteSV --threads ${nT} --genotype --sample ${name}-cute -L 100000 \
 --min_support 10 \
 --min_size 50 --min_mapq 20 --min_read_len 500 \
---merge_del_threshold 270 --merge_ins_threshold 270 \ 
--L 100000 \
+--merge_del_threshold 270 --merge_ins_threshold 270 \
 --max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 200 --diff_ratio_merging_DEL 0.5 \
 ${j} ${ref_genome} ${name}-cutesv.vcf ${SVs}
 
@@ -100,3 +99,13 @@ echo "we are merging SVs ${i} called by 3 programs"
 ls ${SVs}/${i}-*.filtered.vcf >sample_files
 SURVIVOR merge sample_files 0.05 3 1 0 1 50 ${merged_SVs}/${i}.consensus.vcf
 done <${SVs}/sample.namelist.u.txt
+
+for i in $(ls ${merged_SVs}/*.consensus.vcf)
+do
+name=`basename $i | sed 's/.consensus.vcf//g' `
+echo $name
+bcftools view -s ${name}-cute -O v -o ${name}.consensus.cut.vcf
+done
+
+ls ${merged_SVs}/*.consensus.cut.vcf >${merged_SVs}sample.con.list.txt
+SURVIVOR merge ${merged_SVs}/sample.con.list.txt 0.05 1 1 0 1 50 ${merged_SVs}/all.consensus-005.vcf

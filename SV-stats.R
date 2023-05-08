@@ -1,6 +1,9 @@
 ##Credit
-#from"https://gist.github.com/eacooper400/c954c757db02eb6c4ccfae1aa090658c"
-#from 
+#from "https://gist.github.com/eacooper400/c954c757db02eb6c4ccfae1aa090658c"
+#from "https://eacooper400.github.io/gen8900/exercises/tajd.html"
+
+## vk tajima & vcftools --TajimaD only works on SNPs
+## vcftools --TajimaD Expected at least 2 parts in FORMAT entry: ID=DR,Number=2,Type=Integer
 
 ##global settings
 setwd("/Users/Oscar/Desktop/plotting/SV-stats")
@@ -69,13 +72,28 @@ ncol(vcf)
 
 container <- data.frame(matrix(ncol=11, nrow=0))
 for (chr in total_chr){
-  for (what.to.filter in c("INS","DEL","DUP","INV", "TRA", "*")){
+  for (what.to.filter in c( "*","INS","DEL","DUP","INV", "TRA")){
     #print(chr)
-    ##Use the INFO Tag, not the ID. There are few incongruence though
     vcf.part = vcf %>% filter(CHROM == chr) #calculate the window first 
     my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=win.size)
     #print(my.win)
-    vcf.part = vcf %>% filter(CHROM == chr)%>% filter(grepl(what.to.filter,INFO)) 
+    ##Use the INFO Tag, not the ID. There are few incongruence though
+    vcf.part = vcf %>% filter(CHROM == chr)%>% filter(grepl(paste("SVTYPE=",what.to.filter),INFO)) 
+    my.results=data.frame(mut.type="SV", SV.type=what.to.filter, Chromosome=chr, Start=my.win, End=(my.win+win.size), Count=rep(0, length(my.win)))
+    print(nrow(my.results))
+  }
+}
+
+
+container <- data.frame(matrix(ncol=11, nrow=0))
+for (chr in total_chr){
+  for (what.to.filter in c( "*","INS","DEL","DUP","INV", "TRA")){
+    #print(chr)
+    vcf.part = vcf %>% filter(CHROM == chr) #calculate the window first 
+    my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=win.size)
+    #print(my.win)
+    ##Use the INFO Tag, not the ID. There are few incongruence though
+    vcf.part = vcf %>% filter(CHROM == chr)%>% filter(grepl(paste("SVTYPE=",what.to.filter,sep=""),INFO)) 
     my.results=data.frame(mut.type="SV", SV.type=what.to.filter, Chromosome=chr, Start=my.win, End=(my.win+win.size), Count=rep(0, length(my.win)))
     print(nrow(my.results))
     
@@ -123,6 +141,13 @@ p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type))
 
 p4 <-ggplot(data= container)
 p4 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=Chromosome))
+
+p5 <-ggplot(data= container)
+p5 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW/win.size, color=SV.type))
+
+p6 <-ggplot(data= container)
+p6 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW/win.size, color=Chromosome))
+
 
 
 
