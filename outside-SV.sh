@@ -2,7 +2,9 @@
 
 ## path
 merged_SVs="/home/jenyuw/SV-project/result/merged_SVs"
+merged_SNP="/home/jenyuw/SV-project/result/merged_SNP"
 coordinate_bed="/home/jenyuw/SV-project/result/coordinate_bed"
+
 input="/home/jenyuw/SV-project/result/merged_SVs/all.consensus-005.vcf"
 ##either %END or  %INFO/END works
 ##ant character in the '' will be output, even a space!!
@@ -18,3 +20,6 @@ echo $i | gawk -v len=$len ' $2-1000 > 0 {print $1 "\t" $2-len "\t" $2 "\n" $1 "
 done <${coordinate_bed}/intermediate.tsv
 
 bedtools subtract -a ${coordinate_bed}/outside-coordinate.bed -b ${coordinate_bed}/SV-coordinate.bed >${coordinate_bed}/pure-outside.bed
+
+bedtools intersect -header -a ${merged_SNP}/all.snps.vcf.gz -b ${coordinate_bed}/pure-outside.bed |\
+bgzip -@ 8 -c > ${merged_SNP}/all.outside-1000.snps.vcf.gz

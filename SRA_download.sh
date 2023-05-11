@@ -74,18 +74,23 @@ done
 ##NCBI_download
 
 # prefetch PRJNA929424 -O /home/jenyuw/SV-project/raw/PRJNA929424/
+prefetch PRJNA574592 -O /home/jenyuw/SV-project/raw/PRJNA574592/
 # this is fine, but it includes data other than DNA seq so we will waste on time to download unwanted items.
 
 
-
-PRJNA929424     SRR23269563     ONT     Denmark
-PRJNA929424     SRR23269565     ONT     Finland
-PRJNA929424     SRR23269574     ONT     Spain
-PRJNA929424     SRR23269564     ONT     Sweden
-PRJNA929424     SRR23269572     ONT     Turkey
-PRJNA929424     SRR23269573     ONT     Ukraine
-PRJNA929424     SRR23269571     ONT     Zambia
-
+PRJNA929424 SRR23269563 ONT Denmark
+PRJNA929424 SRR23269565 ONT Finland
+PRJNA929424 SRR23269574 ONT Spain
+PRJNA929424 SRR23269564 ONT Sweden
+PRJNA929424 SRR23269572 ONT Turkey
+PRJNA929424 SRR23269573 ONT Ukraine
+PRJNA929424 SRR23269571 ONT  Zambia
+PRJNA574592 SRR10199290 pacbio  RAL208
+PRJNA574592 SRR10199524 pacbio  RAL379
+PRJNA574592 SRR10199525 pacbio  RAL399
+PRJNA574592 SRR10214519 pacbio  RAL799
+PRJNA574592 SRR10200370 pacbio  RAL427
+PRJNA574592 SRR10208187 pacbio  RAL517
 
 for i in /home/jenyuw/SV-project/raw/PRJNA929424/SRR*/*.sra
 do
@@ -95,6 +100,16 @@ echo $name
 fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/PRJNA929424/${name}
 
 #with --stdout, the -O is ignored
+done
+
+PRJ="PRJNA574592"
+tech="pacbio"
+for i in /home/jenyuw/SV-project/raw/${PRJ}/SRR*/*.sra
+do
+echo $i
+name=`basename $i | sed 's/.sra/_${tech}.fastq.gz/'`
+echo $name
+fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/PRJNA929424/${name}
 done
 
 for i in /home/jenyuw/SV-project/raw/*_pacbio/SRR*.fastq.gz
