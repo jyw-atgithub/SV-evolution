@@ -23,3 +23,18 @@ bedtools subtract -a ${coordinate_bed}/outside-coordinate.bed -b ${coordinate_be
 
 bedtools intersect -header -a ${merged_SNP}/all.snps.vcf.gz -b ${coordinate_bed}/pure-outside.bed |\
 bgzip -@ 8 -c > ${merged_SNP}/all.outside-1000.snps.vcf.gz
+
+# dmel-all-r6.46.CDSspans.bed was generated in the DSPR-snp project
+declare -A excl; excl[nonsyn]='synonymous_variant'; excl[syn]='missense_variant'
+declare -A incl; incl[nonsyn]='missense_variant'; incl[syn]='synonymous_variant'
+for i in "${!excl[@]}"
+do
+  bedtools intersect \
+    -header \
+    -a ${merged_SNP}/all.snps.annotated.vcf.gz \
+    -b ${coordinate_bed}/dmel-all-r6.46.CDSspans.bed\
+  | grep -v ${excl[${i}]} \
+  | awk -v m=${incl[${i}]} ' $0 ~ /^#/ || $0 ~ m { print } ' \
+  | bgzip -c -@ 8 > ${merged_SNP}/all.${i}SNPs.vcf.gz
+done
+

@@ -104,12 +104,14 @@ done
 
 PRJ="PRJNA574592"
 tech="pacbio"
+prefetch ${PRJ} -O /home/jenyuw/SV-project/raw/${PRJ}/
 for i in /home/jenyuw/SV-project/raw/${PRJ}/SRR*/*.sra
 do
 echo $i
-name=`basename $i | sed 's/.sra/_${tech}.fastq.gz/'`
+# remember to use double quotes when a variable is inside!!
+name=`basename $i | sed "s/.sra/_${tech}.fastq.gz/"`
 echo $name
-fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/PRJNA929424/${name}
+fastq-dump --split-spot --stdout  $i | pigz -p 8 -v  >/home/jenyuw/SV-project/raw/${PRJ}/${name}
 done
 
 for i in /home/jenyuw/SV-project/raw/*_pacbio/SRR*.fastq.gz

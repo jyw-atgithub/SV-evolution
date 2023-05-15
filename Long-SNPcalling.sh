@@ -68,6 +68,10 @@ bcftools filter --threads 8 -i 'DP > 10 && QUAL >= 30' ${i} | bcftools view -m 2
 tabix -p vcf ${name}.filtered.snps.vcf.gz
 done
 
-bcftools merge --threads 8 --missing-to-ref ${SNP}/*.filtered.snps.vcf.gz -O z > ${merged_SNP}/all.snps.vcf.gz
+#bcftools merge --threads 8 --missing-to-ref ${SNP}/*.filtered.snps.vcf.gz -O z > ${merged_SNP}/all.snps.vcf.gz
+# Avoid using --missing-to-ref, because this does look like a good assumption
+bcftools merge --threads 8 ${SNP}/*.filtered.snps.vcf.gz -O z > ${merged_SNP}/all.snps.vcf.gz
 tabix -p vcf ${merged_SNP}/all.snps.vcf.gz
-snpEff -v BDGP6.32.105 ${merged_SNP}/all.snps.vcf.gz >all.snps.annotated.vcf
+
+conda activate everything
+snpEff -v BDGP6.32.105 ${merged_SNP}/all.snps.vcf.gz | bgzip -@ 8 -c  >all.snps.annotated.vcf.gz
