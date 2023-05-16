@@ -16,7 +16,7 @@ len=1000
 printf "" > ${coordinate_bed}/outside-coordinate.bed
 while read i
 do
-echo $i | gawk -v len=$len ' $2-1000 > 0 {print $1 "\t" $2-len "\t" $2 "\n" $1 "\t" $3 "\t" $3+len}' >> ${coordinate_bed}/outside-coordinate.bed
+echo $i | gawk -v len=$len ' $2-len > 0 {print $1 "\t" $2-len "\t" $2 "\n" $1 "\t" $3 "\t" $3+len}' >> ${coordinate_bed}/outside-coordinate.bed
 done <${coordinate_bed}/intermediate.tsv
 
 bedtools subtract -a ${coordinate_bed}/outside-coordinate.bed -b ${coordinate_bed}/SV-coordinate.bed >${coordinate_bed}/pure-outside.bed

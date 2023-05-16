@@ -61,12 +61,14 @@ variance.d <- function(n,S) {
 vcf <- read.vcf("all.consensus-005.vcf", header=TRUE, stringsAsFactors=FALSE)
 snp.vcf <- read.vcf("all.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
 snp.outside.vcf <- read.vcf("all.outside-1000.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
+syn.snp.vcf <- read.vcf("all.synSNPs.vcf", header=TRUE, stringsAsFactors=FALSE)
 bed <- read.table("pure-outside.bed", header = FALSE)
 ##variables
 win.size=1000000
+syn.win.size=1000
 total_chr <- levels(as.factor(vcf$CHROM))
 num.samples=ncol(vcf)-9
-container <- data.frame(matrix(ncol=11, nrow=0))
+container <- data.frame(matrix(ncol=13, nrow=0))
 colnames(container) <- c("mut.type", "SV.type", "Chromosome","Start","End","Count","Nchr", "ThetaW","Pi" ,"varD" ,"TajimaD")
 
 
@@ -74,9 +76,9 @@ colnames(container) <- c("mut.type", "SV.type", "Chromosome","Start","End","Coun
 #vcf.part = vcf %>% filter(CHROM == "2R")
 ncol(vcf)
 
-container <- data.frame(matrix(ncol=11, nrow=0))
+
 for (chr in total_chr){
-  for (what.to.filter in c( "*","INS","DEL","DUP","INV", "TRA")){
+  for (what.to.filter in c("INS","DEL","DUP","INV", "TRA")){
     #print(chr)
     vcf.part = vcf %>% filter(CHROM == chr) #calculate the window first 
     my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=win.size)
@@ -93,17 +95,19 @@ for (chr in total_chr){
     my.results$Nchr=2*(num.samples)
     a=seq(from=1, to=((2*num.samples)-1), by=1) #the sequence of numbers from 1 to 2N-1,
     my.results$ThetaW = my.results$Count/(sum(1/a)) #calculate the Theta-W
-
+    my.results$ThetaW.persite = my.results$ThetaW/win.size #calculate the Theta-W, per bp
     
     my.results$Pi=rep(0, nrow(my.results)) # Set up an empty column to hold the results of the function
     for (i in 1:nrow(my.results)) {
       d=subset(vcf.part, (vcf.part$POS>=my.results$Start[i] & vcf.part$POS<my.results$End[i])) # get the subset in the window
       if (nrow(d)==0){ #to prevent error if it is empty
         my.results$Pi[i]=0
+        my.results$Pi.persite[i]=0
       }else{
         j=apply(d, 1, FUN=derivedCount)
         c=rep(my.results$Nchr[i], length(j)) # a vector of my 2N values (same as c in Pi equation) that is the same length as my vector of j values
         my.results$Pi[i]=sum((2*j*(c-j))/(c*(c-1)))
+        my.results$Pi.persite[i]=my.results$Pi[i]/win.size
       }
     }#calculate the pi
     
@@ -117,13 +121,14 @@ for (chr in total_chr){
 }
 
 ##Let's work on snps
-## all snps
+## all SYN snps
+
 for (chr in total_chr){
     #print(chr)
     vcf.part = snp.vcf %>% filter(CHROM == chr) #calculate the window first 
-    my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=win.size)
+    my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=syn.win.size)
     #print(my.win)
-    my.results=data.frame(mut.type="SNP", SV.type="all.SNP", Chromosome=chr, Start=my.win, End=(my.win+win.size), Count=rep(0, length(my.win)))
+    my.results=data.frame(mut.type="SNP", SV.type="all.syn.SNP", Chromosome=chr, Start=my.win, End=(my.win+syn.win.size), Count=rep(0, length(my.win)))
     print(nrow(my.results))
     
     for (i in 1:nrow(my.results)) {
@@ -133,17 +138,19 @@ for (chr in total_chr){
     my.results$Nchr=2*(num.samples)
     a=seq(from=1, to=((2*num.samples)-1), by=1) #the sequence of numbers from 1 to 2N-1,
     my.results$ThetaW = my.results$Count/(sum(1/a)) #calculate the Theta-W
-    
+    my.results$ThetaW.persite = my.results$ThetaW/syn.win.size #calculate the Theta-W
     
     my.results$Pi=rep(0, nrow(my.results)) # Set up an empty column to hold the results of the function
     for (i in 1:nrow(my.results)) {
       d=subset(vcf.part, (vcf.part$POS>=my.results$Start[i] & vcf.part$POS<my.results$End[i])) # get the subset in the window
       if (nrow(d)==0){ #to prevent error if it is empty
         my.results$Pi[i]=0
+        my.results$Pi.persite[i]=0
       }else{
         j=apply(d, 1, FUN=derivedCount)
         c=rep(my.results$Nchr[i], length(j)) # a vector of my 2N values (same as c in Pi equation) that is the same length as my vector of j values
         my.results$Pi[i]=sum((2*j*(c-j))/(c*(c-1)))
+        my.results$Pi.persite[i]=my.results$Pi[i]/syn.win.size
       }
     }#calculate the pi
     
@@ -196,7 +203,6 @@ for (chr in total_chr){
 
 ##Let's work on snps
 ## neighboring outside snps, NO windows !!!
-
 for (i in 1:nrow(bed)){
   vcf.part = snp.outside.vcf %>% filter(CHROM == bed[i, 1])
   my.results=data.frame(mut.type="SNP", SV.type="1k.SNP", Chromosome=bed[i, 1], Start=bed[i, 2], End=bed[i, 3], Count=0)
@@ -206,7 +212,8 @@ for (i in 1:nrow(bed)){
   a=seq(from=1, to=((2*num.samples)-1), by=1)
   #calculate the Theta-W
   my.results$ThetaW = my.results$Count/(sum(1/a)) 
-
+  my.results$ThetaW.persite = my.results$ThetaW/(bed[i, 3]-bed[i, 2])
+  
   my.results$Pi=0 # Set up an empty column to hold the results of the function
   if (nrow(d)==0){ #to prevent error if it is empty
     my.results$Pi=0
@@ -214,6 +221,7 @@ for (i in 1:nrow(bed)){
     j=apply(d, 1, FUN=derivedCount)
     c=rep(my.results$Nchr, length(j)) # a vector of my 2N values (same as c in Pi equation) that is the same length as my vector of j values
     my.results$Pi=sum((2*j*(c-j))/(c*(c-1)))
+    my.results$Pi.persite=my.results$Pi/(bed[i, 3]-bed[i, 2])
   }
   
   my.results$varD=0
@@ -223,26 +231,74 @@ for (i in 1:nrow(bed)){
   print(paste(round(100*i/nrow(bed),2),"%", sep = "", collapse=""))
 }
 
+##Let's work on snps
+## neighboring outside SYN snps, NO windows !!!
+for (i in 1:nrow(bed)){
+  vcf.part = syn.snp.vcf %>% filter(CHROM == bed[i, 1])
+  my.results=data.frame(mut.type="SNP", SV.type="1k.syn.SNP", Chromosome=bed[i, 1], Start=bed[i, 2], End=bed[i, 3], Count=0)
+  d=subset(vcf.part, (vcf.part$POS>=bed[i, 2] & vcf.part$POS<bed[i, 3]))
+  my.results$Count=nrow(d)
+  my.results$Nchr=2*(num.samples)
+  a=seq(from=1, to=((2*num.samples)-1), by=1)
+  #calculate the Theta-W
+  my.results$ThetaW = my.results$Count/(sum(1/a)) 
+  my.results$ThetaW.persite = my.results$ThetaW/(bed[i, 3]-bed[i, 2])
+  
+  my.results$Pi=0 # Set up an empty column to hold the results of the function
+  if (nrow(d)==0){ #to prevent error if it is empty
+    my.results$Pi=0
+    my.results$Pi.persite=0
+  }else{
+    j=apply(d, 1, FUN=derivedCount)
+    c=rep(my.results$Nchr, length(j)) # a vector of my 2N values (same as c in Pi equation) that is the same length as my vector of j values
+    my.results$Pi=sum((2*j*(c-j))/(c*(c-1)))
+    my.results$Pi.persite=my.results$Pi/(bed[i, 3]-bed[i, 2])
+  }
+  
+  my.results$varD=0
+  my.results$varD = variance.d(n=my.results$Nchr, S=my.results$Count)
+  my.results$TajimaD = (my.results$Pi - my.results$ThetaW)/(sqrt(my.results$varD))#calculate the Tajima's D
+  container <- rbind(container, my.results)
+  print(paste(round(100*i/nrow(bed),2),"%", sep = "", collapse=""))
+}
 
 p1 <-ggplot(data= container)
-p1 + geom_boxplot(mapping=aes(x= SV.type, y= Pi/win.size, color=SV.type)) +
-  scale_y_log10() + theme_bw()
+p1 + geom_boxplot(mapping=aes(x= reorder(SV.type, Pi.persite, FUN = mean, decreasing=TRUE), 
+                              y= Pi.persite, color=SV.type), lwd=1)  + 
+  scale_y_log10() + theme_bw(base_size = 14) +
+  xlab("Type of variant") + ylab("log(Pi-per-site)")
 
 p2 <-ggplot(data= container)
 p2 + geom_boxplot(mapping=aes(x= SV.type, y= Pi/win.size, color=Chromosome))
 
 
 p3 <-ggplot(data= container)
-p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type))+ theme_bw()
+p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+ 
+  theme_bw(base_size = 14) +
+  xlab("Type of variant") + ylab("Tajima's D")
+levels(container$SV.type )
+
+container$SV.type <- factor(container$SV.type , levels=c("all.syn.SNP", "1k.syn.SNP", "INS", "DEL", "DUP", "INV", "TRA"))
+p3 <-ggplot(data= container)
+p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+ 
+  theme_bw(base_size = 14) +
+  xlab("Type of variant") + ylab("Tajima's D")
+
+
+boxplot(data$value ~ data$names , col=rgb(0.3,0.5,0.4,0.6) , ylab="value" , 
+        xlab="names in desired order")
+
+
 
 p4 <-ggplot(data= container)
 p4 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=Chromosome))
 
 p5 <-ggplot(data= container)
-p5 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW/win.size, color=SV.type))
+p5 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW.persite, color=SV.type)) +
+  scale_y_log10() + theme_bw()
 
 p6 <-ggplot(data= container)
-p6 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW/win.size, color=Chromosome))
+p6 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW, color=Chromosome))
 
 
 
