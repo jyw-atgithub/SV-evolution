@@ -203,33 +203,34 @@ for (chr in total_chr){
 
 ##Let's work on snps
 ## neighboring outside snps, NO windows !!!
-for (i in 1:nrow(bed)){
-  vcf.part = snp.outside.vcf %>% filter(CHROM == bed[i, 1])
-  my.results=data.frame(mut.type="SNP", SV.type="1k.SNP", Chromosome=bed[i, 1], Start=bed[i, 2], End=bed[i, 3], Count=0)
-  d=subset(vcf.part, (vcf.part$POS>=bed[i, 2] & vcf.part$POS<bed[i, 3]))
-  my.results$Count=nrow(d)
-  my.results$Nchr=2*(num.samples)
-  a=seq(from=1, to=((2*num.samples)-1), by=1)
-  #calculate the Theta-W
-  my.results$ThetaW = my.results$Count/(sum(1/a)) 
-  my.results$ThetaW.persite = my.results$ThetaW/(bed[i, 3]-bed[i, 2])
-  
-  my.results$Pi=0 # Set up an empty column to hold the results of the function
-  if (nrow(d)==0){ #to prevent error if it is empty
-    my.results$Pi=0
-  }else{
-    j=apply(d, 1, FUN=derivedCount)
-    c=rep(my.results$Nchr, length(j)) # a vector of my 2N values (same as c in Pi equation) that is the same length as my vector of j values
-    my.results$Pi=sum((2*j*(c-j))/(c*(c-1)))
-    my.results$Pi.persite=my.results$Pi/(bed[i, 3]-bed[i, 2])
-  }
-  
-  my.results$varD=0
-  my.results$varD = variance.d(n=my.results$Nchr, S=my.results$Count)
-  my.results$TajimaD = (my.results$Pi - my.results$ThetaW)/(sqrt(my.results$varD))#calculate the Tajima's D
-  container <- rbind(container, my.results)
-  print(paste(round(100*i/nrow(bed),2),"%", sep = "", collapse=""))
-}
+# for (i in 1:nrow(bed)){
+#   vcf.part = snp.outside.vcf %>% filter(CHROM == bed[i, 1])
+#   my.results=data.frame(mut.type="SNP", SV.type="1k.SNP", Chromosome=bed[i, 1], Start=bed[i, 2], End=bed[i, 3], Count=0)
+#   d=subset(vcf.part, (vcf.part$POS>=bed[i, 2] & vcf.part$POS<bed[i, 3]))
+#   my.results$Count=nrow(d)
+#   my.results$Nchr=2*(num.samples)
+#   a=seq(from=1, to=((2*num.samples)-1), by=1)
+#   #calculate the Theta-W
+#   my.results$ThetaW = my.results$Count/(sum(1/a)) 
+#   my.results$ThetaW.persite = my.results$ThetaW/(bed[i, 3]-bed[i, 2])
+#   
+#   my.results$Pi=0 # Set up an empty column to hold the results of the function
+#   my.results$Pi.persite=0
+#   if (nrow(d)==0){ #to prevent error if it is empty
+#     my.results$Pi=0
+#   }else{
+#     j=apply(d, 1, FUN=derivedCount)
+#     c=rep(my.results$Nchr, length(j)) # a vector of my 2N values (same as c in Pi equation) that is the same length as my vector of j values
+#     my.results$Pi=sum((2*j*(c-j))/(c*(c-1)))
+#     my.results$Pi.persite=my.results$Pi/(bed[i, 3]-bed[i, 2])
+#   }
+#   
+#   my.results$varD=0
+#   my.results$varD = variance.d(n=my.results$Nchr, S=my.results$Count)
+#   my.results$TajimaD = (my.results$Pi - my.results$ThetaW)/(sqrt(my.results$varD))#calculate the Tajima's D
+#   container <- rbind(container, my.results)
+#   print(paste(round(100*i/nrow(bed),2),"%", sep = "", collapse=""))
+# }
 
 ##Let's work on snps
 ## neighboring outside SYN snps, NO windows !!!
@@ -262,6 +263,8 @@ for (i in 1:nrow(bed)){
   print(paste(round(100*i/nrow(bed),2),"%", sep = "", collapse=""))
 }
 
+
+
 p1 <-ggplot(data= container)
 p1 + geom_boxplot(mapping=aes(x= reorder(SV.type, Pi.persite, FUN = mean, decreasing=TRUE), 
                               y= Pi.persite, color=SV.type), lwd=1)  + 
@@ -276,19 +279,23 @@ p3 <-ggplot(data= container)
 p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+ 
   theme_bw(base_size = 14) +
   xlab("Type of variant") + ylab("Tajima's D")
-levels(container$SV.type )
 
+# levels(as.factor(container$SV.type))
+# change the order of display
 container$SV.type <- factor(container$SV.type , levels=c("all.syn.SNP", "1k.syn.SNP", "INS", "DEL", "DUP", "INV", "TRA"))
+# Rename the column and the values in the factor
+# http://www.cookbook-r.com/Graphs/Legends_(ggplot2)/
+levels(container$SV.type)[levels(container$SV.type)=="all.syn.SNP"] <- "SYN*"
+levels(container$SV.type)[levels(container$SV.type)=="1k.syn.SNP"] <- "1k**"
+
 p3 <-ggplot(data= container)
-p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+ 
+p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+
   theme_bw(base_size = 14) +
   xlab("Type of variant") + ylab("Tajima's D")
-
-
-boxplot(data$value ~ data$names , col=rgb(0.3,0.5,0.4,0.6) , ylab="value" , 
-        xlab="names in desired order")
-
-
+p3 + geom_violin(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1, trim=FALSE)+
+  theme_bw(base_size = 14) +
+  xlab("Type of variant") + ylab("Tajima's D") +
+  geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color="black"), width=0.07)
 
 p4 <-ggplot(data= container)
 p4 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=Chromosome))
@@ -299,6 +306,24 @@ p5 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW.persite, color=SV.type)) +
 
 p6 <-ggplot(data= container)
 p6 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW, color=Chromosome))
+
+
+#write.csv(container, file="container.0516.csv")
+container=read.csv("container.0516.csv")
+a = container %>% filter(SV.type=="DEL")
+sum(a$Count)
+summary(a$ThetaW.persite)
+summary(a$Pi.persite)
+b = container %>% filter(SV.type=="INS")
+res <- wilcox.test(na.omit(a$TajimaD), na.omit(b$TajimaD))
+res
+
+
+
+
+
+
+
 
 
 
