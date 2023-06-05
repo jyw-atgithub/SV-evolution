@@ -63,7 +63,7 @@ conda activate assemble #this include flye, canu, bwa, fastp, trimmomatic, assem
 for i in $(ls ${trimmed}/*.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
-flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
+flye --threads $nT --genome-size 135m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
 done
 
 ## Long-read assembly with Canu
@@ -83,49 +83,29 @@ minReadLength=500 \
 done
 
 
+#Set input and parameters
+round=2
+threads=20
+read=/home/jenyuw/SV-project/raw/nv107_combined.fastq
+read_type=ont #{clr,hifi,ont}
+mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
+input=/home/jenyuw/SV-project/result/assemble/nv107_Flye/assembly.fasta
 
-/data/home/jenyuw/anaconda3/envs/assemble/bin/sqStoreCreate \
-  -o ./nv107.corrected.seqStore.BUILDING \
-  -minlength 1000 \
-  -genomesize 170000000 \
-  -coverage   200 \
-  -bias       0 \
-  -raw -nanopore nv107_combined /data/home/jenyuw/NV_reads/nv107/combined_fastq/nv107_combined.fastq \
+for ((i=1; i<=${round};i++)); do
+    minimap2 -ax ${mapping_option[$read_type]} -t ${threads} ${input} ${read}|samtools sort - -m 2g --threads ${threads} -o lgs.sort.bam;
+    samtools index lgs.sort.bam;
+    ls `pwd`/lgs.sort.bam > lgs.sort.bam.fofn;
+    python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l lgs.sort.bam.fofn -r ${read_type} -p ${threads} -sp -o genome.nextpolish.fa;
+    if ((i!=${round}));then
+        mv genome.nextpolish.fa genome.nextpolishtmp.fa;
+        input=genome.nextpolishtmp.fa;
+    fi;
+done;
 
 
-canu [-haplotype|-correct|-trim] \
-   [-s <assembly-specifications-file>] \
-   -p <assembly-prefix> \
-   -d <assembly-directory> \
-   genomeSize=<number>[g|m|k] \
-   [other-options] \
-   [-trimmed|-untrimmed|-raw|-corrected] \
-   [-pacbio|-nanopore|-pacbio-hifi] *fastq
-
-
-
+# Finally polished genome file: genome.nextpolish.fa
 ## Short-read mapping with sorting
-
 #bwa index ${ref_genome}
-
-: <<'SKIP'
-SKIP
-nptest="/home/jenyuw/SV-project/np-test"
-
-for j in $(ls ${raw}/nv1*_illumina_r1.fastq)
-do
-name=$(basename ${j} |sed "s/_illumina_r.*.fastq//g")
-r2=$(echo $j |sed 's/r1/r2/')
-#The rules (of using * and ?) in sed is different.
-mkfifo ${name}.read1 ${name}.read2
-fastp -i ${j} -I ${r2} -o ${nptest}/${name}.read1 -O ${nptest}/${name}.read2 --thread ${nT} --detect_adapter_for_pe --overrepresentation_analysis --correction --cut_tail --average_qual 3
-bwa mem -M -t ${nT} ${ref_genome} ${nptest}/${name}.read1 ${nptest}/${name}.read2 | samtools view -bh -|\
-samtools sort -@ ${nT} -o ${nptest}/${name}.sort.bam -
-done
-
-
-
-
 for j in $(ls ${raw}/nv1*_illumina_r1.fastq)
 do
 echo $j
@@ -145,7 +125,7 @@ assembly-stats
 #dnadiff is a part of mummer
 dnadiff –p out assembly.fasta ${ref_genome}
 
-
+##Polishing with Pilon
 for k in $(ls ${assemble}/nv???_Flye/assembly.fasta)
 do
 name=$(echo $k | sed "s@${assemble}\/@@g; s@_Flye@@g;; s@\/assembly.fasta@@g")

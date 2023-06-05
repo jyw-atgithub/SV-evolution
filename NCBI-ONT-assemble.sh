@@ -48,7 +48,7 @@ for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
     name=$(basename ${i}|sed s/".trimmed.fastq"//g)
     echo $i 
     echo $name
-    flye --threads $nT --genome-size 170m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
+    flye --threads $nT --genome-size 135m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
     done
 
 
