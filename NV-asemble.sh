@@ -12,7 +12,7 @@ scaffold="/home/jenyuw/SV-project/result/scaffold"
 busco_out="/home/jenyuw/SV-project/result/busco_out"
 ## prep
 source ~/.bashrc
-nT=10
+nT=30
 
 
 ## The initial QC report SHORT reads
@@ -68,8 +68,6 @@ done
 
 ## Long-read assembly with Canu
 # use Canu to correct, trim and assemble, all at once
-
-
 for i in $(ls ${trimmed}/*.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
@@ -82,28 +80,39 @@ minReadLength=500 \
 -raw -nanopore ${i}
 done
 
+##Quality control
+assembly-stats
+#dnadiff is a part of mummer
+dnadiff –p out assembly.fasta ${ref_genome}
 
+##Polishing with NextPolish
+for j in $(ls ${assemble}/nv*_Flye/assembly.fasta)
+do
+name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
+echo $name
 #Set input and parameters
 round=2
-threads=20
-read=/home/jenyuw/SV-project/raw/nv107_combined.fastq
+read=${trimmed}/${name}.trimmed.fastq
 read_type=ont #{clr,hifi,ont}
 mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
-input=/home/jenyuw/SV-project/result/assemble/nv107_Flye/assembly.fasta
+input=${j}
 
-for ((i=1; i<=${round};i++)); do
-    minimap2 -ax ${mapping_option[$read_type]} -t ${threads} ${input} ${read}|samtools sort - -m 2g --threads ${threads} -o lgs.sort.bam;
-    samtools index lgs.sort.bam;
-    ls `pwd`/lgs.sort.bam > lgs.sort.bam.fofn;
-    python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l lgs.sort.bam.fofn -r ${read_type} -p ${threads} -sp -o genome.nextpolish.fa;
-    if ((i!=${round}));then
-        mv genome.nextpolish.fa genome.nextpolishtmp.fa;
-        input=genome.nextpolishtmp.fa;
-    fi;
-done;
+    for ((i=1; i<=${round};i++)); do
+        minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
+        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
+        samtools index ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
+        ls ${aligned_bam}/${name}.trimmed-Flye.sort.bam > ${polishing}/lgs.sort.bam.fofn;
+        python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
+        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.nextpolish.fasta;
+        # Finally polished genome file: ${name}.nextpolish.fasta
+        if ((i!=${round}));then
+            mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.nextpolishtmp.fasta;
+            input=${polishing}/${name}.nextpolishtmp.fasta;
+        fi;
+    done;
+done
 
 
-# Finally polished genome file: genome.nextpolish.fa
 ## Short-read mapping with sorting
 #bwa index ${ref_genome}
 for j in $(ls ${raw}/nv1*_illumina_r1.fastq)
@@ -121,9 +130,7 @@ bwa mem -M -t ${nT} ${ref_genome} ${trimmed}/${name}.trimmed.r1.fastq ${trimmed}
 samtools sort -@ ${nT} - -o ${aligned_bam}/${name}.sort.bam
 done
 
-assembly-stats
-#dnadiff is a part of mummer
-dnadiff –p out assembly.fasta ${ref_genome}
+
 
 ##Polishing with Pilon
 for k in $(ls ${assemble}/nv???_Flye/assembly.fasta)
