@@ -60,12 +60,12 @@ input=${k}
 for ((i=1; i<=${round};i++)); do
 bwa-mem2 index ${input}
 bwa-mem2 mem -t ${nT} ${input} $r1 $r2 |samtools view -S -b -h |\
-samtools sort -@ ${nT} -o ${aligned_bam}/${name}.ILL-Flye.sort.bam
-samtools index ${aligned_bam}/${name}.ILL-Flye.sort.bam
+samtools sort -@ ${nT} -o ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
+samtools index ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
 
 java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid --minqual 7 \
---genome ${assemble}/${name}/assembly.fasta \
---frags ${aligned_bam}/${name}.ILL-Flye.sort.bam \
+--genome ${input} \
+--frags ${aligned_bam}/${name}.ILL-nextpolish.sort.bam \
 --output ${name}.pilon --outdir ${polishing}
     if ((i!=${round}));then
         mv ${polishing}/${name}.pilon.fasta ${polishing}/${name}.pilontmp.fasta;
@@ -79,6 +79,20 @@ done
 #"java -Xmx128G -jar" means giving the program an allowance of 128Gb memory.
 #java -XX:+AggressiveHeap -jar means letting the program use as much memory as needed.
 
+
+for k in $(ls ${polishing}/nv107.nextpolish.fasta)
+do
+name=$(echo $k | sed "s@${polishing}\/@@g; s@.nextpolish.fasta@@g")
+r1="${trimmed}/${name}.trimmed.r1.fastq"
+r2="${trimmed}/${name}.trimmed.r2.fastq"
+input=${k}
+
+java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid --minqual 7 \
+--genome ${input} \
+--frags ${aligned_bam}/${name}.ILL-nextpolish.sort.bam \
+--output ${name}.pilon --outdir ${polishing}
+
+done
 
 
 
