@@ -48,13 +48,13 @@ conda activate assemble #this is for bwa-mem2
 
 ##Polishing with Pilon
 ##nv samples
-for k in $(ls ${polishing}/*.nextpolish.fasta)
+for k in $(ls ${polishing}/nv*.nextpolish.fasta)
 do
 name=$(echo $k | sed "s@${polishing}\/@@g; s@.nextpolish.fasta@@g")
 r1="${trimmed}/${name}.trimmed.r1.fastq"
 r2="${trimmed}/${name}.trimmed.r2.fastq"
  
-round=2
+round=3
 input=${k}
 
 for ((i=1; i<=${round};i++)); do
