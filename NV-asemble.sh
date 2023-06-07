@@ -81,37 +81,40 @@ minReadLength=500 \
 done
 
 ## Long-read assembly with nextDenovo
-: <<'SKIP'
+
+for i in $(ls ${trimmed}/nv{107,109}.trimmed.fastq)
+do
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+
+echo -e "
 job_type = local
 job_prefix = nextDenovo
 task = all
 rewrite = yes
 deltmp = yes
+
 parallel_jobs = 20
 input_type = raw
 read_type = ont # clr, ont, hifi
 input_fofn = /home/jenyuw/SV-project/result/assemble/input.fofn
-workdir = /home/jenyuw/SV-project/result/assemble/${name}
+workdir = /home/jenyuw/SV-project/result/assemble/${name}_nextdenovo
 
 [correct_option]
 read_cutoff = 1k
 genome_size = 135m
 seed_depth = 45 #you can try to set it 30-45 to get a better assembly result
 seed_cutoff = 0
-sort_options = -m 200g -t 30
-minimap2_options_raw = -t 30
+sort_options = -m 200g -t 20
+minimap2_options_raw = -t 20
 pa_correction = 5
-correction_options = -p 30
+correction_options = -p 20
 
 [assemble_option]
-minimap2_options_cns = -t 30 -k17 -w17
-minimap2_options_map = -t 30
+minimap2_options_cns = -t 20 -k17 -w17
+minimap2_options_map = -t 20
 nextgraph_options = -a 1
-SKIP
+" >${assemble}/run.cfg
 
-for i in $(ls ${trimmed}/nv{107,109}.trimmed.fastq)
-do
-name=$(basename ${i}|sed s/".trimmed.fastq"//g)
 ls $i > ${assemble}/input.fofn
 nextDenovo ${assemble}/run.cfg
 done
