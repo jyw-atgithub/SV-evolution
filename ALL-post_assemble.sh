@@ -43,8 +43,24 @@ input=${j}
         fi;
     done;
 done
+##According to the author, making the loops manually is faster than using the package.
+##The BWA contained in the original package is broken. We need to `git clone` the original bwa, so the installation (make) can be success. 
+##because there both python2 and python3, change the shebang line as "#!/usr/bin/env python3"
 
 conda activate assemble #this is for bwa-mem2
+
+## trim the short-reads
+for j in $(ls ${raw}/nv1*_illumina_r1.fastq)
+do
+echo $j
+name=$(basename ${j} |sed "s/_illumina_r.*.fastq//g")
+#The rules (of using * and ?) in sed is different.
+echo $name
+r2=$(echo $j |sed 's/r1/r2/')
+echo $r2
+fastp -i ${j} -I ${r2} -o ${trimmed}/${name}.trimmed.r1.fastq -O ${trimmed}/${name}.trimmed.r2.fastq \
+--thread ${nT} --detect_adapter_for_pe --overrepresentation_analysis --correction --cut_tail --average_qual 3
+done
 
 ##Polishing with Pilon
 ##nv samples
@@ -57,21 +73,21 @@ r2="${trimmed}/${name}.trimmed.r2.fastq"
 round=3
 input=${k}
 
-for ((i=1; i<=${round};i++)); do
-bwa-mem2 index ${input}
-bwa-mem2 mem -t ${nT} ${input} $r1 $r2 |samtools view -S -b -h |\
-samtools sort -@ ${nT} -o ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
-samtools index ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
+    for ((i=1; i<=${round};i++)); do
+    bwa-mem2 index ${input}
+    bwa-mem2 mem -t ${nT} ${input} $r1 $r2 |samtools view -S -b -h |\
+    samtools sort -@ ${nT} -o ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
+    samtools index ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
 
-java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid --minqual 7 \
---genome ${input} \
---frags ${aligned_bam}/${name}.ILL-nextpolish.sort.bam \
---output ${name}.pilon --outdir ${polishing}
-    if ((i!=${round}));then
-        mv ${polishing}/${name}.pilon.fasta ${polishing}/${name}.pilontmp.fasta;
-        input=${polishing}/${name}.pilontmp.fasta;
-    fi;
-done
+    java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid --minqual 7 \
+    --genome ${input} \
+    --frags ${aligned_bam}/${name}.ILL-nextpolish.sort.bam \
+    --output ${name}.pilon --outdir ${polishing}
+        if ((i!=${round}));then
+            mv ${polishing}/${name}.pilon.fasta ${polishing}/${name}.pilontmp.fasta;
+            input=${polishing}/${name}.pilontmp.fasta;
+        fi;
+    done
 done
 #--threads is not supported by Pilon anymore
 #Do NOT use the pilon installed by Anaconda, it will crash because of memory limit.
@@ -80,46 +96,63 @@ done
 #java -XX:+AggressiveHeap -jar means letting the program use as much memory as needed.
 
 
-for k in $(ls ${polishing}/nv107.nextpolish.fasta)
+##NCBI-Nanopore samples
+conda activate post-proc #this contain Racon, Ragtag
+##Polishing with racon
+for k in $(ls ${assemble}/*_ONT_Flye/assembly.fasta)
 do
-name=$(echo $k | sed "s@${polishing}\/@@g; s@.nextpolish.fasta@@g")
-r1="${trimmed}/${name}.trimmed.r1.fastq"
-r2="${trimmed}/${name}.trimmed.r2.fastq"
+name=$(echo $k | gawk -F "/" '{print $7}' | sed s/_Flye//g)
+read=${trimmed}/${name}.trimmed.fastq
+
+round=3
 input=${k}
 
-java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid --minqual 7 \
---genome ${input} \
---frags ${aligned_bam}/${name}.ILL-nextpolish.sort.bam \
---output ${name}.pilon --outdir ${polishing}
-
+    for (i=1; i<=${round};i++)
+    do
+    echo "round $i"
+    minimap2 -a -x map-ont -t ${nT} ${input} ${read} |\
+    samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-Flye.sort.bam
+    samtools index ${aligned_bam}/${name}.trimmed-Flye.sort.bam
+    racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-Flye.sort.bam ${input} >${polishing}/${name}.racon.fasta
+        if ((i!=${round}));then
+        mv ${polishing}/${name}.racon.fasta ${polishing}/${name}.racontmp.fasta;
+        input=${polishing}/${name}.racontmp.fasta;
+        fi;
+    done
 done
-
-
-
-
-## Short-read mapping with sorting
-#bwa index ${ref_genome}
-for j in $(ls ${raw}/nv1*_illumina_r1.fastq)
+##Polishing with Nextpolish
+for j in $(ls ${polishing}/*_ONT.racon.fasta)
 do
-echo $j
-name=$(basename ${j} |sed "s/_illumina_r.*.fastq//g")
-#The rules (of using * and ?) in sed is different.
+name=$(echo $j|gawk -F "/" '{print $7}'|sed s/.racon.fasta//)
 echo $name
-r2=$(echo $j |sed 's/r1/r2/')
-echo $r2
-fastp -i ${j} -I ${r2} -o ${trimmed}/${name}.trimmed.r1.fastq -O ${trimmed}/${name}.trimmed.r2.fastq \
---thread ${nT} --detect_adapter_for_pe --overrepresentation_analysis --correction --cut_tail --average_qual 3
+#Set input and parameters
+round=3
+read=${trimmed}/${name}.trimmed.fastq
+read_type=ont #{clr,hifi,ont}
+mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
+input=${j}
 
-bwa mem -M -t ${nT} ${ref_genome} ${trimmed}/${name}.trimmed.r1.fastq ${trimmed}/${name}.trimmed.r2.fastq |\
-samtools sort -@ ${nT} - -o ${aligned_bam}/${name}.sort.bam
+    for ((i=1; i<=${round};i++)); do
+        minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
+        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
+        samtools index ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
+        ls ${aligned_bam}/${name}.trimmed-Flye.sort.bam > ${polishing}/lgs.sort.bam.fofn;
+        python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
+        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.nextpolish.fasta;
+        # Finally polished genome file: ${name}.nextpolish.fasta
+        if ((i!=${round}));then
+            mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.nextpolishtmp.fasta;
+            input=${polishing}/${name}.nextpolishtmp.fasta;
+        fi;
+    done;
 done
 
 
-
+##Patching
 
 
 ## scaffolding.sh
-conda activate post-proc #this contain Racon, Ragtag
+
 for i in $(ls ${polishing}/*.polished.fasta)
 do
 name=$(basename $i |sed s/.polished.fasta//g)

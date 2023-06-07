@@ -80,110 +80,45 @@ minReadLength=500 \
 -raw -nanopore ${i}
 done
 
+## Long-read assembly with nextDenovo
+: <<'SKIP'
+job_type = local
+job_prefix = nextDenovo
+task = all
+rewrite = yes
+deltmp = yes
+parallel_jobs = 20
+input_type = raw
+read_type = ont # clr, ont, hifi
+input_fofn = /home/jenyuw/SV-project/result/assemble/input.fofn
+workdir = /home/jenyuw/SV-project/result/assemble/${name}
+
+[correct_option]
+read_cutoff = 1k
+genome_size = 135m
+seed_depth = 45 #you can try to set it 30-45 to get a better assembly result
+seed_cutoff = 0
+sort_options = -m 200g -t 30
+minimap2_options_raw = -t 30
+pa_correction = 5
+correction_options = -p 30
+
+[assemble_option]
+minimap2_options_cns = -t 30 -k17 -w17
+minimap2_options_map = -t 30
+nextgraph_options = -a 1
+SKIP
+
+for i in $(ls ${trimmed}/nv{107,109}.trimmed.fastq)
+do
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+ls $i > ${assemble}/input.fofn
+nextDenovo ${assemble}/run.cfg
+done
+
+
+
 ##Quality control
 assembly-stats
 #dnadiff is a part of mummer
 dnadiff –p out assembly.fasta ${ref_genome}
-
-##Polishing with NextPolish
-for j in $(ls ${assemble}/nv*_Flye/assembly.fasta)
-do
-name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
-echo $name
-#Set input and parameters
-round=2
-read=${trimmed}/${name}.trimmed.fastq
-read_type=ont #{clr,hifi,ont}
-mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
-input=${j}
-
-    for ((i=1; i<=${round};i++)); do
-        minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
-        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
-        samtools index ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
-        ls ${aligned_bam}/${name}.trimmed-Flye.sort.bam > ${polishing}/lgs.sort.bam.fofn;
-        python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
-        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.nextpolish.fasta;
-        # Finally polished genome file: ${name}.nextpolish.fasta
-        if ((i!=${round}));then
-            mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.nextpolishtmp.fasta;
-            input=${polishing}/${name}.nextpolishtmp.fasta;
-        fi;
-    done;
-done
-
-
-## Short-read mapping with sorting
-#bwa index ${ref_genome}
-for j in $(ls ${raw}/nv1*_illumina_r1.fastq)
-do
-echo $j
-name=$(basename ${j} |sed "s/_illumina_r.*.fastq//g")
-#The rules (of using * and ?) in sed is different.
-echo $name
-r2=$(echo $j |sed 's/r1/r2/')
-echo $r2
-fastp -i ${j} -I ${r2} -o ${trimmed}/${name}.trimmed.r1.fastq -O ${trimmed}/${name}.trimmed.r2.fastq \
---thread ${nT} --detect_adapter_for_pe --overrepresentation_analysis --correction --cut_tail --average_qual 3
-
-bwa mem -M -t ${nT} ${ref_genome} ${trimmed}/${name}.trimmed.r1.fastq ${trimmed}/${name}.trimmed.r2.fastq |\
-samtools sort -@ ${nT} - -o ${aligned_bam}/${name}.sort.bam
-done
-
-
-
-##Polishing with Pilon
-for k in $(ls ${assemble}/nv???_Flye/assembly.fasta)
-do
-name=$(echo $k | sed "s@${assemble}\/@@g; s@_Flye@@g;; s@\/assembly.fasta@@g")
-r1="${trimmed}/${name}.trimmed.r1.fastq"
-r2="${trimmed}/${name}.trimmed.r2.fastq"
-bwa index $k
-bwa mem -t ${nT} $k $r1 $r2 |samtools view -S -b -h |\
-samtools sort -@ ${nT} -o ${polishing}/${name}_ILL2ONT.sort.bam
-samtools index ${polishing}/${name}_ILL2ONT.sort.bam
-
-java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid \
---genome ${assemble}/${name}/assembly.fasta \
---frags ${polishing}/${name}_ILL2ONT.sort.bam \
---output ${name}.polished --outdir ${polishing} 
-done
-#--threads is not supported by Pilon anymore
-#Do NOT use the pilon installed by Anaconda, it will crash because of memory limit.
-#Just download the precompiled jar file from the latest release on Github.
-#"java -Xmx128G -jar" means giving the program an allowance of 128Gb memory.
-#java -XX:+AggressiveHeap -jar means letting the program use as much memory as needed.
-
-
-
-## scaffolding.sh
-conda activate post-proc #this contain Racon, Ragtag
-for i in $(ls ${polishing}/*.polished.fasta)
-do
-name=$(basename $i |sed s/.polished.fasta//g)
-echo $name
-ragtag.py scaffold -t ${nT} -o ${scaffold}/${name} $ref_genome ${i}
-done
-
-ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
-raw="/home/jenyuw/SV-project/raw"
-qc_report="/home/jenyuw/SV-project/result/qc_report"
-trimmed="/home/jenyuw/SV-project/result/trimmed"
-assemble="/home/jenyuw/SV-project/result/assemble"
-aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
-polishing="/home/jenyuw/SV-project/result/polishing"
-canu_proc="/home/jenyuw/SV-project/result/canu_processing"
-scaffold="/home/jenyuw/SV-project/result/scaffold"
-busco_out="/home/jenyuw/SV-project/result/busco_out"
-
-conda activate busco
-for i in $(ls ${assemble}/nv*_Flye/assembly.fasta)
-do
-strain=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_Flye//g)
-echo $strain
-busco -i ${i} --out_path ${busco_out} -o ${strain} -m genome --cpu 8 -l diptera_odb10
-done
-
-busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
-
-busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
