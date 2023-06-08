@@ -17,7 +17,7 @@ canu_proc="/home/jenyuw/SV-project/result/canu_processing"
 scaffold="/home/jenyuw/SV-project/result/scaffold"
 ## prep
 source ~/.bashrc
-nT=8
+nT=20
 
 conda activate longqc
 
@@ -52,52 +52,42 @@ for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
     done
 
 
-##polishing, without illumina reads or FAST5. --> Medaka or Racon.
-##Medaka is designed to be used on Flye assembly directly!!
-##Medaka was installed with "pip" because Anaconda kept failing.
-conda activate post-proc
 
+## Long-read assembly with nextDenovo
 
-for i in $(ls ${assemble}/SRR*_ONT_Flye/assembly.fasta)
+for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
 do
-echo $i 
-name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
-echo $name
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
 
-medaka_consensus -i ${raw}/PRJNA929424/${name}_ONT.fastq.gz -d ${i} -o ${polishing}/${name}-medaka-1 \
--t ${nT} -m r941_min_hac_g507
+echo -e "
+job_type = local
+job_prefix = nextDenovo
+task = all
+rewrite = yes
+deltmp = yes
+
+parallel_jobs =8 #M gb memory, between M/64~M/32
+input_type = raw
+read_type = ont # clr, ont, hifi
+input_fofn = /home/jenyuw/SV-project/result/assemble/input.fofn
+workdir = /home/jenyuw/SV-project/result/assemble/${name}_nextdenovo
+
+[correct_option]
+read_cutoff = 1k
+genome_size = 135m
+seed_depth = 45 #you can try to set it 30-45 to get a better assembly result
+seed_cutoff = 0
+sort_options = -m 100g -t 4 #m=M/(TOTAL_INPUT_BASES * 1.2/4)
+minimap2_options_raw = -t 4
+pa_correction = 5 #M/(TOTAL_INPUT_BASES * 1.2/4)
+correction_options = -p 4 #P cores, P/parallel_jobs
+
+[assemble_option]
+minimap2_options_cns = -t 4 -k17 -w17
+minimap2_options_map = -t 4 #P cores, P/parallel_jobs
+nextgraph_options = -a 1
+" >${assemble}/run.cfg
+
+ls $i > ${assemble}/input.fofn
+nextDenovo ${assemble}/run.cfg
 done
-
-
-for i in /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta
-do
-echo $i 
-name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
-echo $name
-
-medaka_consensus -i /home/jenyuw/SV-project/raw/PRJNA929424/SRR23269563_ONT.fastq.gz \
--d /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta \
--o ${polishing}/SRR23269563-medaka-1/ \
--t ${nT} -m r941_min_hac_g507
-done
-
-
-minimap2 -t ${nT} -B 5 -a -x map-ont \
-$i ${trimmed}/${name}_ONT.trimmed.fastq |\
-samtools view -b -h -@ ${nT} -o - |\
-samtools sort -@ ${nT} -o ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
-samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
-
-medaka_consensus -i ${BASECALLS} -d ${DRAFT} -o ${OUTDIR} -t ${nT}\
--m r941_min_hac_g507
-
-
-
-racon -t ${nT} \
-${trimmed}/${name}_ONT.trimmed.fastq \
-${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam \
-$i \ 
-> ${polishing}/${name}.polished.racon.1.fasta
-
-rm ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
-rm ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam.bai

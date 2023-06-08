@@ -82,7 +82,7 @@ done
 
 ## Long-read assembly with nextDenovo
 
-for i in $(ls ${trimmed}/nv{107,109}.trimmed.fastq)
+for i in $(ls ${trimmed}/nv115.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
 

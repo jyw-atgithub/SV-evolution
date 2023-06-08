@@ -15,12 +15,15 @@ source ~/.bashrc
 nT=30
 
 
+${assembler}
 
 ##Polishing with NextPolish
 ##nv samples
-for j in $(ls ${assemble}/nv*_Flye/assembly.fasta)
+assembler="Flye"
+for j in $(ls ${assemble}/nv*_${assembler}/assembly.fasta)
 do
 name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
+
 echo $name
 #Set input and parameters
 round=3
@@ -31,25 +34,31 @@ input=${j}
 
     for ((i=1; i<=${round};i++)); do
         minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
-        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
-        samtools index ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
-        ls ${aligned_bam}/${name}.trimmed-Flye.sort.bam > ${polishing}/lgs.sort.bam.fofn;
+        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
+        samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
+        ls ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam > ${polishing}/lgs.sort.bam.fofn;
         python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
-        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.nextpolish.fasta;
+        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${assembler}.nextpolish.fasta;
         # Finally polished genome file: ${name}.nextpolish.fasta
         if ((i!=${round}));then
-            mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.nextpolishtmp.fasta;
-            input=${polishing}/${name}.nextpolishtmp.fasta;
+            mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
+            input=${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
         fi;
     done;
+
+rm ${polishing}/${name}.${assembler}.nextpolishtmp.fasta
+rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
 done
+
 ##According to the author, making the loops manually is faster than using the package.
 ##The BWA contained in the original package is broken. We need to `git clone` the original bwa, so the installation (make) can be success. 
 ##because there both python2 and python3, change the shebang line as "#!/usr/bin/env python3"
 
 conda activate assemble #this is for bwa-mem2
 
-## trim the short-reads
+## trim the short-reads, only need once
+: << 'SKIP'
 for j in $(ls ${raw}/nv1*_illumina_r1.fastq)
 do
 echo $j
@@ -61,12 +70,13 @@ echo $r2
 fastp -i ${j} -I ${r2} -o ${trimmed}/${name}.trimmed.r1.fastq -O ${trimmed}/${name}.trimmed.r2.fastq \
 --thread ${nT} --detect_adapter_for_pe --overrepresentation_analysis --correction --cut_tail --average_qual 3
 done
+SKIP
 
 ##Polishing with Pilon
 ##nv samples
-for k in $(ls ${polishing}/nv*.nextpolish.fasta)
+for k in $(ls ${polishing}/nv*.${assembler}.nextpolish.fasta)
 do
-name=$(echo $k | sed "s@${polishing}\/@@g; s@.nextpolish.fasta@@g")
+name=$(echo $k | sed "s@${polishing}\/@@g; s@${assembler}.nextpolish.fasta@@g")
 r1="${trimmed}/${name}.trimmed.r1.fastq"
 r2="${trimmed}/${name}.trimmed.r2.fastq"
  
@@ -82,13 +92,17 @@ input=${k}
     java -XX:+AggressiveHeap -jar /home/jenyuw/Software/pilon-1.24.jar --diploid --minqual 7 \
     --genome ${input} \
     --frags ${aligned_bam}/${name}.ILL-nextpolish.sort.bam \
-    --output ${name}.pilon --outdir ${polishing}
+    --output ${name}.${assembler}.pilon --outdir ${polishing}
         if ((i!=${round}));then
-            mv ${polishing}/${name}.pilon.fasta ${polishing}/${name}.pilontmp.fasta;
-            input=${polishing}/${name}.pilontmp.fasta;
+            mv ${polishing}/${name}.${assembler}.pilon.fasta ${polishing}/${name}.${assembler}.pilontmp.fasta;
+            input=${polishing}/${name}.${assembler}.pilontmp.fasta;
         fi;
     done
+mv ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
+nv ${aligned_bam}/${name}.ILL-nextpolish.sort.bam.bai
+mv ${polishing}/${name}.${assembler}.pilontmp.fasta
 done
+
 #--threads is not supported by Pilon anymore
 #Do NOT use the pilon installed by Anaconda, it will crash because of memory limit.
 #Just download the precompiled jar file from the latest release on Github.
@@ -99,9 +113,10 @@ done
 ##NCBI-Nanopore samples
 conda activate post-proc #this contain Racon, Ragtag
 ##Polishing with racon
-for k in $(ls ${assemble}/*_ONT_Flye/assembly.fasta)
+assembler=Flye
+for k in $(ls ${assemble}/*_ONT_${assembler}/assembly.fasta)
 do
-name=$(echo $k | gawk -F "/" '{print $7}' | sed s/_Flye//g)
+name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${assembler}//g")
 read=${trimmed}/${name}.trimmed.fastq
 
 round=3
@@ -111,19 +126,25 @@ input=${k}
     do
     echo "round $i"
     minimap2 -a -x map-ont -t ${nT} ${input} ${read} |\
-    samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-Flye.sort.bam
-    samtools index ${aligned_bam}/${name}.trimmed-Flye.sort.bam
-    racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-Flye.sort.bam ${input} >${polishing}/${name}.racon.fasta
+    samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+    samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+    racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam ${input} >${polishing}/${name}.${assembler}.racon.fasta
         if ((i!=${round}));then
-        mv ${polishing}/${name}.racon.fasta ${polishing}/${name}.racontmp.fasta;
-        input=${polishing}/${name}.racontmp.fasta;
+        mv ${polishing}/${name}.${assembler}.racon.fasta ${polishing}/${name}.${assembler}.racontmp.fasta;
+        input=${polishing}/${name}.${assembler}.racontmp.fasta;
         fi;
     done
+mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
+mv ${polishing}/${name}.${assembler}.racontmp.fasta
 done
+
+
+
 ##Polishing with Nextpolish
-for j in $(ls ${polishing}/*_ONT.racon.fasta)
+for j in $(ls ${polishing}/*_ONT.${assembler}.racon.fasta)
 do
-name=$(echo $j|gawk -F "/" '{print $7}'|sed s/.racon.fasta//)
+name=$(echo $j|gawk -F "/" '{print $7}'|sed "s/.${assembler}.racon.fasta//")
 echo $name
 #Set input and parameters
 round=3
@@ -134,22 +155,73 @@ input=${j}
 
     for ((i=1; i<=${round};i++)); do
         minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
-        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
-        samtools index ${aligned_bam}/${name}.trimmed-Flye.sort.bam;
-        ls ${aligned_bam}/${name}.trimmed-Flye.sort.bam > ${polishing}/lgs.sort.bam.fofn;
+        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
+        samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
+        ls ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam > ${polishing}/lgs.sort.bam.fofn;
         python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
-        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.nextpolish.fasta;
+        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${assembler}.nextpolish.fasta;
         # Finally polished genome file: ${name}.nextpolish.fasta
         if ((i!=${round}));then
-            mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.nextpolishtmp.fasta;
-            input=${polishing}/${name}.nextpolishtmp.fasta;
+            mv ${polishing}/${name}.${assembler}.nextpolish.fasta ${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
+            input=${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
         fi;
     done;
+mv ${polishing}/${name}.${assembler}.nextpolishtmp.fasta
+mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
 done
+
+
+##polishing, without illumina reads or FAST5. --> Medaka or Racon.
+##Medaka is designed to be used on Flye assembly directly!!
+##Medaka was installed with "pip" because Anaconda kept failing.
+conda activate post-proc
+
+
+for i in $(ls ${assemble}/SRR*_ONT_Flye/assembly.fasta)
+do
+echo $i 
+name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
+echo $name
+
+medaka_consensus -i ${raw}/PRJNA929424/${name}_ONT.fastq.gz -d ${i} -o ${polishing}/${name}-medaka-1 \
+-t ${nT} -m r941_min_hac_g507
+done
+
+
+for i in /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta
+do
+echo $i 
+name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
+echo $name
+
+medaka_consensus -i /home/jenyuw/SV-project/raw/PRJNA929424/SRR23269563_ONT.fastq.gz \
+-d /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta \
+-o ${polishing}/SRR23269563-medaka-1/ \
+-t ${nT} -m r941_min_hac_g507
+done
+
+
+minimap2 -t ${nT} -B 5 -a -x map-ont \
+$i ${trimmed}/${name}_ONT.trimmed.fastq |\
+samtools view -b -h -@ ${nT} -o - |\
+samtools sort -@ ${nT} -o ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
+samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
+
+medaka_consensus -i ${BASECALLS} -d ${DRAFT} -o ${OUTDIR} -t ${nT}\
+-m r941_min_hac_g507
 
 
 ##Patching
 
+
+
+for i in $(ls ${polishing}/)
+do
+ragtag.py patch <target.fa> <query.fa>
+  -o PATH              output directory [./ragtag_output]
+  -w                   overwrite intermediate files
+done
 
 ## scaffolding.sh
 
