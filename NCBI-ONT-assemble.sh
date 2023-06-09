@@ -58,6 +58,7 @@ for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
 for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+ls $i > ${assemble}/input.fofn
 
 echo -e "
 job_type = local
@@ -88,6 +89,5 @@ minimap2_options_map = -t 4 #P cores, P/parallel_jobs
 nextgraph_options = -a 1
 " >${assemble}/run.cfg
 
-ls $i > ${assemble}/input.fofn
 nextDenovo ${assemble}/run.cfg
 done
