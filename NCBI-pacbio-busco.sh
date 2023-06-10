@@ -4,8 +4,8 @@
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p standard        ## partition/queue name
 #SBATCH --array=1-14      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=20    ## number of cores the job needs
-#SBATCH --mem-per-cpu=4G     # requesting 6 GB memory per CPU, the max
+#SBATCH --cpus-per-task=16    ## number of cores the job needs
+#SBATCH --mem-per-cpu=6G     # requesting 6 GB memory per CPU, the max
 
 
 ##pauvre is useful to check the sequencing stats (pauvre stats)
@@ -28,4 +28,4 @@ echo $name
 #busco
 conda activate BUSCO
 
-busco -i ${wd}/${name}_Flye/assembly.fasta -l diptera_odb10 -o ${busco_out}/${name} -m genome -c ${nT}
+busco -i ${wd}/${name}_Flye/assembly.fasta -l diptera_odb10 --out_path ${busco_out} -o ${name}_Flye -m genome -c ${nT}

@@ -99,3 +99,4 @@ echo "we are merging SVs ${i} called by 3 programs"
 ls ${SVs}/${i}-*.filtered.vcf >sample_files
 SURVIVOR merge sample_files 0.05 3 1 0 1 50 ${merged_SVs}/${i}.consensus.vcf
 done <${SVs}/sample.namelist.u.txt
+

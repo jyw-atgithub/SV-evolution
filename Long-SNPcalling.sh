@@ -74,4 +74,5 @@ bcftools merge --threads 8 ${SNP}/*.filtered.snps.vcf.gz -O z > ${merged_SNP}/al
 tabix -p vcf ${merged_SNP}/all.snps.vcf.gz
 
 conda activate everything
-snpEff -v BDGP6.32.105 ${merged_SNP}/all.snps.vcf.gz | bgzip -@ 8 -c  >all.snps.annotated.vcf.gz
+snpEff -v BDGP6.32.105 ${merged_SNP}/all.snps.vcf.gz | bgzip -@ 8 -c  >${merged_SNP}/all.snps.annotated.vcf.gz
+

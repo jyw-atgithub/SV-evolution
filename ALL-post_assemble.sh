@@ -211,10 +211,12 @@ samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
 medaka_consensus -i ${BASECALLS} -d ${DRAFT} -o ${OUTDIR} -t ${nT}\
 -m r941_min_hac_g507
 
+## purge_dups
+
+
+
 
 ##Patching
-
-
 
 for i in $(ls ${polishing}/)
 do
@@ -233,14 +235,12 @@ ragtag.py scaffold -t ${nT} -o ${scaffold}/${name} $ref_genome ${i}
 done
 
 
+
 conda activate busco
-for i in $(ls ${assemble}/nv*_Flye/assembly.fasta)
+# BUSCO score of non-polished assembly
+for i in $(ls ${assemble}/*_Flye/assembly.fasta)
 do
 strain=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_Flye//g)
 echo $strain
-busco -i ${i} --out_path ${busco_out} -o ${strain} -m genome --cpu 8 -l diptera_odb10
+busco -i ${i} --out_path ${busco_out} -o ${strain}_Flye -m genome --cpu 20 -l diptera_odb10
 done
-
-busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
-
-busco -i nv107.polished.fasta -o nv107.p -m genome --cpu 20 -l diptera_odb10
