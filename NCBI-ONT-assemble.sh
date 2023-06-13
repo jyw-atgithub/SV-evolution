@@ -71,12 +71,12 @@ parallel_jobs =8 #M gb memory, between M/64~M/32
 input_type = raw
 read_type = ont # clr, ont, hifi
 input_fofn = /home/jenyuw/SV-project/result/assemble/input.fofn
-workdir = /home/jenyuw/SV-project/result/assemble/${name}_nextdenovo
+workdir = /home/jenyuw/SV-project/result/assemble/${name}_nextdenovo-30
 
 [correct_option]
 read_cutoff = 1k
 genome_size = 135m
-seed_depth = 45 #you can try to set it 30-45 to get a better assembly result
+seed_depth = 30 #you can try to set it 30-45 to get a better assembly result
 seed_cutoff = 0
 sort_options = -m 100g -t 4 #m=M/(TOTAL_INPUT_BASES * 1.2/4)
 minimap2_options_raw = -t 4

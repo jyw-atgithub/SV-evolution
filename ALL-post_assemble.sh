@@ -98,9 +98,9 @@ input=${k}
             input=${polishing}/${name}.${assembler}.pilontmp.fasta;
         fi;
     done
-mv ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
-nv ${aligned_bam}/${name}.ILL-nextpolish.sort.bam.bai
-mv ${polishing}/${name}.${assembler}.pilontmp.fasta
+rm ${aligned_bam}/${name}.ILL-nextpolish.sort.bam
+rm ${aligned_bam}/${name}.ILL-nextpolish.sort.bam.bai
+rm ${polishing}/${name}.${assembler}.pilontmp.fasta
 done
 
 #--threads is not supported by Pilon anymore
@@ -114,6 +114,7 @@ done
 conda activate post-proc #this contain Racon, Ragtag
 ##Polishing with racon
 assembler=Flye
+
 for k in $(ls ${assemble}/*_ONT_${assembler}/assembly.fasta)
 do
 name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${assembler}//g")
@@ -122,7 +123,7 @@ read=${trimmed}/${name}.trimmed.fastq
 round=3
 input=${k}
 
-    for (i=1; i<=${round};i++)
+    for ((i=1; i<=${round};i++))
     do
     echo "round $i"
     minimap2 -a -x map-ont -t ${nT} ${input} ${read} |\
@@ -134,14 +135,13 @@ input=${k}
         input=${polishing}/${name}.${assembler}.racontmp.fasta;
         fi;
     done
-mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
-mv ${polishing}/${name}.${assembler}.racontmp.fasta
+rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
+rm ${polishing}/${name}.${assembler}.racontmp.fasta
 done
+conda deactivate
 
-
-
-##Polishing with Nextpolish
+##Then, polishing with Nextpolish
 for j in $(ls ${polishing}/*_ONT.${assembler}.racon.fasta)
 do
 name=$(echo $j|gawk -F "/" '{print $7}'|sed "s/.${assembler}.racon.fasta//")
@@ -166,9 +166,9 @@ input=${j}
             input=${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
         fi;
     done;
-mv ${polishing}/${name}.${assembler}.nextpolishtmp.fasta
-mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-mv ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
+rm ${polishing}/${name}.${assembler}.nextpolishtmp.fasta
+rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
 done
 
 
@@ -238,9 +238,32 @@ done
 
 conda activate busco
 # BUSCO score of non-polished assembly
-for i in $(ls ${assemble}/*_Flye/assembly.fasta)
+assembler="Flye"
+for i in $(ls ${assemble}/*_${assembler}/assembly.fasta)
 do
-strain=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_Flye//g)
+#echo $i
+strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${assembler}//g")
 echo $strain
-busco -i ${i} --out_path ${busco_out} -o ${strain}_Flye -m genome --cpu 20 -l diptera_odb10
+busco -i ${i} --out_path ${busco_out} -o ${strain}_${assembler} -m genome --cpu 20 -l diptera_odb10
+done
+
+assembler="canu"
+for i in $(ls ${assemble}/*_${assembler}/*.corrected.contigs.fasta)
+do
+#echo $i
+strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${assembler}//g")
+echo $strain
+busco -i ${i} --out_path ${busco_out} -o ${strain}_${assembler} -m genome --cpu 20 -l diptera_odb10
+done
+
+assembler="nextdenovo nextdenovo-30"
+for a in `echo $assembler`
+do
+    for i in $(ls ${assemble}/*_${a}/03.ctg_graph/nd.asm.fasta)
+    do
+    #echo $i
+    strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${a}//g")
+    echo $strain
+    busco -i ${i} --out_path ${busco_out} -o ${strain}_${a} -m genome --cpu 20 -l diptera_odb10
+    done
 done
