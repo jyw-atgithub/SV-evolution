@@ -51,7 +51,13 @@ for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
     flye --threads $nT --genome-size 135m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
     done
 
-
+## improve the SRR_num="SRR232695" samples
+for i in $(ls ${trimmed}/${SRR_num}*_ONT.trimmed.fastq)
+do
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+flye --threads $nT --meta --genome-size 135m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye-meta
+flye --threads $nT --meta --scaffold --genome-size 135m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye-meta-scfd
+done
 
 ## Long-read assembly with nextDenovo
 

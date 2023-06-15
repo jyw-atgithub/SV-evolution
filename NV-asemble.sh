@@ -60,7 +60,7 @@ done
 ## Long-read assembly with flye
 conda activate assemble #this include flye, canu, bwa, fastp, trimmomatic, assembly-stats, mummer(4), bwa-mem2
 # --nano-raw, The expected error rate is 10-15%
-for i in $(ls ${trimmed}/*.trimmed.fastq)
+for i in $(ls ${trimmed}/nv*.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
 flye --threads $nT --genome-size 135m --nano-raw ${i} --out-dir ${assemble}/${name}_Flye
@@ -68,7 +68,7 @@ done
 
 ## Long-read assembly with Canu
 # use Canu to correct, trim and assemble, all at once
-for i in $(ls ${trimmed}/*.trimmed.fastq)
+for i in $(ls ${trimmed}/nv*.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
 
@@ -119,7 +119,13 @@ ls $i > ${assemble}/input.fofn
 nextDenovo ${assemble}/run.cfg
 done
 
+## Long-read assembly with GoldRush
 
+for i in $(ls ${trimmed}/nv*.trimmed.fastq)
+do
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+goldrush run reads=${i} G=1.35e8 t=32 track_time=1 p=??
+done
 
 ##Quality control
 assembly-stats

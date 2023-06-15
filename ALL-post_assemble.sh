@@ -126,17 +126,16 @@ input=${k}
     for ((i=1; i<=${round};i++))
     do
     echo "round $i"
-    minimap2 -a -x map-ont -t ${nT} ${input} ${read} |\
-    samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-    samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-    racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam ${input} >${polishing}/${name}.${assembler}.racon.fasta
+    minimap2 -x map-ont -t ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.paf ${input} ${read}
+    #samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+    #samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+    racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${assembler}.paf ${input} >${polishing}/${name}.${assembler}.racon.fasta
         if ((i!=${round}));then
         mv ${polishing}/${name}.${assembler}.racon.fasta ${polishing}/${name}.${assembler}.racontmp.fasta;
         input=${polishing}/${name}.${assembler}.racontmp.fasta;
         fi;
     done
-rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
+rm ${aligned_bam}/${name}.trimmed-${assembler}.paf
 rm ${polishing}/${name}.${assembler}.racontmp.fasta
 done
 conda deactivate
@@ -241,7 +240,6 @@ conda activate busco
 assembler="Flye"
 for i in $(ls ${assemble}/*_${assembler}/assembly.fasta)
 do
-#echo $i
 strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${assembler}//g")
 echo $strain
 busco -i ${i} --out_path ${busco_out} -o ${strain}_${assembler} -m genome --cpu 20 -l diptera_odb10
@@ -250,7 +248,6 @@ done
 assembler="canu"
 for i in $(ls ${assemble}/*_${assembler}/*.corrected.contigs.fasta)
 do
-#echo $i
 strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${assembler}//g")
 echo $strain
 busco -i ${i} --out_path ${busco_out} -o ${strain}_${assembler} -m genome --cpu 20 -l diptera_odb10
@@ -261,9 +258,23 @@ for a in `echo $assembler`
 do
     for i in $(ls ${assemble}/*_${a}/03.ctg_graph/nd.asm.fasta)
     do
-    #echo $i
     strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${a}//g")
     echo $strain
     busco -i ${i} --out_path ${busco_out} -o ${strain}_${a} -m genome --cpu 20 -l diptera_odb10
     done
 done
+
+assembler="canu Flye nextdenovo nextdenovo-30"
+for a in $(echo ${assembler} )
+do
+    for i in $(ls ${busco_out}/*_${a}/short_summary.specific.diptera_odb10.*.txt)
+    do
+    name=$(echo $i| gawk -F "/" ' {print $7}' | sed "s/_${a}//g")
+    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${name}\t${a}"
+    done
+done 
+
+#awk '{print substr(s, i, n)}' substr function accepts three arguments
+#s: input string
+#i: start index, 1-based!
+#n: length
