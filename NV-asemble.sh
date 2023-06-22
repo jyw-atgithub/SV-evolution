@@ -119,13 +119,18 @@ ls $i > ${assemble}/input.fofn
 nextDenovo ${assemble}/run.cfg
 done
 
+: << 'SKIP'
 ## Long-read assembly with GoldRush
-
-for i in $(ls ${trimmed}/nv*.trimmed.fastq)
+## Not working right now
+conda activate goldrush
+for i in $(ls ${trimmed}/nv107.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
-goldrush run reads=${i} G=1.35e8 t=32 track_time=1 p=??
+input=$(echo ${i}|sed s/.fastq//)
+mkdir ${assemble}/${name}_goldpath
+goldrush run reads=${input} G=1.35e8 t=22 track_time=1 p=$name
 done
+SKIP
 
 ##Quality control
 assembly-stats

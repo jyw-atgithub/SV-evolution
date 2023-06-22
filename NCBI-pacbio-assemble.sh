@@ -53,3 +53,48 @@ flye --threads $nT --genome-size 170m --asm-coverage 90 --pacbio-raw ${wd}/${nam
 
 #flye does NOT accept stdin (/dev/stdin)
 #unpigz -p 4 -c A1_combine_pacbio.fastq.gz|head -n 10000 |grep "@" | sort | uniq -d
+
+
+## On THOTH
+
+#!/bin/bash
+## path
+trimmed="/home/jenyuw/SV-project/result/trimmed"
+assemble="/home/jenyuw/SV-project/result/assemble"
+
+for i in $(ls ${trimmed}/*.trimmed.rn.fastq.gz)
+do
+name=$(basename ${i}|sed s/".trimmed.rn.fastq.gz"//g)
+
+echo -e "
+job_type = local
+job_prefix = nextDenovo
+task = all
+rewrite = yes
+deltmp = yes
+
+parallel_jobs =8 #M gb memory, between M/64~M/32
+input_type = raw
+read_type = clr # clr, ont, hifi
+input_fofn = /home/jenyuw/SV-project/result/assemble/input.fofn
+workdir = /home/jenyuw/SV-project/result/assemble/${name}_nextdenovo-30
+
+[correct_option]
+read_cutoff = 1k
+genome_size = 135m
+seed_depth = 30 #you can try to set it 30-45 to get a better assembly result
+seed_cutoff = 0
+sort_options = -m 100g -t 4 #m=M/(TOTAL_INPUT_BASES * 1.2/4)
+minimap2_options_raw = -t 4
+pa_correction = 5 #M/(TOTAL_INPUT_BASES * 1.2/4)
+correction_options = -p 4 #P cores, P/parallel_jobs
+
+[assemble_option]
+minimap2_options_cns = -t 4 -k17 -w17
+minimap2_options_map = -t 4 #P cores, P/parallel_jobs
+nextgraph_options = -a 1
+" >${assemble}/run.cfg
+
+ls $i > ${assemble}/input.fofn
+nextDenovo ${assemble}/run.cfg
+done

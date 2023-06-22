@@ -211,9 +211,10 @@ medaka_consensus -i ${BASECALLS} -d ${DRAFT} -o ${OUTDIR} -t ${nT}\
 -m r941_min_hac_g507
 
 ## purge_dups
+pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
 
-
-
+python3 ${pd_scripts}/pd_config.py [-h] [-s SRF] [-l LOCD] [-n FN] [--version] ref pbfofn
+./scripts/pd_config.py -l iHelSar1.pri -s 10x.fofn -n config.iHelSar1.PB.asm1.json ~/vgp/release/insects/iHelSar1/iHlSar1.PB.asm1/iHelSar1.PB.asm1.fa.gz pb.fofn
 
 ##Patching
 
@@ -237,12 +238,12 @@ done
 
 conda activate busco
 # BUSCO score of non-polished assembly
-assembler="Flye"
+assembler="Flye-meta Flye-meta-scfd"
 for i in $(ls ${assemble}/*_${assembler}/assembly.fasta)
 do
 strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${assembler}//g")
 echo $strain
-busco -i ${i} --out_path ${busco_out} -o ${strain}_${assembler} -m genome --cpu 20 -l diptera_odb10
+busco -i ${i} --out_path ${busco_out} -o ${strain}_${assembler} -m genome --cpu 8 -l diptera_odb10
 done
 
 assembler="canu"
@@ -264,6 +265,18 @@ do
     done
 done
 
+assembler="nextdenovo-30"
+for a in `echo $assembler`
+do
+    for i in $(ls ${assemble}/{A{1..7},AB8,B{1,2,3,4,6},ORE}_${a}/03.ctg_graph/nd.asm.fasta)
+    do
+    strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${a}//g")
+    echo $strain
+    busco -i ${i} --out_path ${busco_out} -o ${strain}_${a} -m genome --cpu 20 -l diptera_odb10
+    done
+done
+
+#collect the BUSCO scores
 assembler="canu Flye nextdenovo nextdenovo-30"
 for a in $(echo ${assembler} )
 do
@@ -273,6 +286,9 @@ do
     grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${name}\t${a}"
     done
 done 
+
+# BUSCO score of POLISHED assembly
+
 
 #awk '{print substr(s, i, n)}' substr function accepts three arguments
 #s: input string
