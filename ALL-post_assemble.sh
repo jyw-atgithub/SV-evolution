@@ -15,8 +15,6 @@ source ~/.bashrc
 nT=30
 
 
-${assembler}
-
 ##Polishing with NextPolish
 ##nv samples
 assembler="Flye"
@@ -211,10 +209,66 @@ medaka_consensus -i ${BASECALLS} -d ${DRAFT} -o ${OUTDIR} -t ${nT}\
 -m r941_min_hac_g507
 
 ## purge_dups
+purge_dups="/home/jenyuw/SV-project/result/purge_dups"
 pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
 
-python3 ${pd_scripts}/pd_config.py [-h] [-s SRF] [-l LOCD] [-n FN] [--version] ref pbfofn
-./scripts/pd_config.py -l iHelSar1.pri -s 10x.fofn -n config.iHelSar1.PB.asm1.json ~/vgp/release/insects/iHelSar1/iHlSar1.PB.asm1/iHelSar1.PB.asm1.fa.gz pb.fofn
+ls ${trimmed}/nv107.trimmed.fastq >${purge_dups}/read.fofn
+python3 ${pd_scripts}/pd_config.py \
+    -l ${purge_dups} \
+    -n ${purge_dups}/TESTconfig.json \
+    ${assemble}/nv107_Flye/assembly.fasta \
+    ${purge_dups}/read.fofn
+
+echo -e "
+{
+  \"cc\": {
+    \"fofn\": \"${purge_dups}/read.fofn\",
+    \"isdip\": 1,
+    \"core\": 12,
+    \"mem\": 40000,
+    \"queue\": \"normal\",
+    \"mnmp_opt\": \"\",
+    \"bwa_opt\": \"\",
+    \"ispb\": 1,
+    \"skip\": 0
+  },
+  \"sa\": {
+    \"core\": 12,
+    \"mem\": 20000,
+    \"queue\": \"normal\"
+  },
+  \"busco\": {
+    \"core\": 12,
+    \"mem\": 40000,
+    \"queue\": \"long\",
+    \"skip\": 0,
+    \"lineage\": \"diptera\",
+    \"prefix\": \"assembly_purged\",
+    \"tmpdir\": \"busco_tmp\"
+  },
+  \"pd\": {
+    \"mem\": 40000,
+    \"queue\": \"normal\"
+  },
+  \"gs\": {
+    \"mem\": 20000,
+    \"oe\": 1
+  },
+  \"kcp\": {
+    \"core\": 12,
+    \"mem\": 60000,
+    \"fofn\": \"\",
+    \"prefix\": \"assembly_purged_kcm\",
+    \"tmpdir\": \"kcp_tmp\",
+    \"skip\": 1
+  },
+  \"ref\": "\"/home/jenyuw/SV-project/result/purge_dups/assembly.fasta\"",
+  \"out_dir\": "\"${purge_dups}/test\""
+}" >${purge_dups}/TESTconfig.json
+
+python3 ${pd_scripts}/run_purge_dups.py \
+    --platform bash --wait 1 --retries 3 \
+    ${purge_dups}/TESTconfig.json /home/jenyuw/Software/purge_dups/bin nv107
 
 ##Patching
 
@@ -288,7 +342,19 @@ do
 done 
 
 # BUSCO score of POLISHED assembly
+for i in $(ls ${polishing}/nv*.pilon.fasta)
+do
+name=$(basename ${i}|sed s/.fasta// )
+echo $name 
+busco -i ${i} --out_path ${busco_out} -o ${name} -m genome --cpu 20 -l diptera_odb10
+done
 
+for i in $(ls ${polishing}/*.Flye.racon.fasta)
+do
+name=$(basename ${i}|sed s/.fasta// )
+echo $name 
+busco -i ${i} --out_path ${busco_out} -o ${name} -m genome --cpu 20 -l diptera_odb10
+done
 
 #awk '{print substr(s, i, n)}' substr function accepts three arguments
 #s: input string
