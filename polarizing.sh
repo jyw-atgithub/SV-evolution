@@ -1,11 +1,12 @@
 #!/bin/bash
 dmel_ref="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
 dsim_ref="/home/jenyuw/SV-project/reference_genome/dsim-all-chromosome-r2.02.fasta"
-
+trimmed="/home/jenyuw/SV-project/result/trimmed"
 merged_SVs="/home/jenyuw/SV-project/result/merged_SVs"
 aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
 polarizing="/home/jenyuw/SV-project/result/polarizing"
 len=1000
+nT=24
 
 bcftools view --thread 4 -i ' SVLEN<200 && SVLEN>90 && SVTYPE="INS" ' -r 2L:9000000-10000000 \
 ${merged_SVs}/all.consensus-005.vcf.gz 2> /dev/null |\
@@ -18,8 +19,44 @@ name=$(basename $i|sed s/.trimmed-ref.sort.bam//g)
 bedtools intersect -a ${i} -b ${polarizing}/part_ins.bed >${polarizing}/${name}.part-ins.bam
 done
 
-parallel -j 3 bedtools intersect -a {} -b ${polarizing}/part_ins.bed > {#}.part_ins.bam ::: $(ls ${aligned_bam}/nv*.trimmed-ref.sort.bam)
-parallel -j 10 echo {#}{} ::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
-parallel -j 10 echo {#}{} ::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam |basename |sed s/.trimmed-ref.sort.bam//g)
+for i in $(ls ${trimmed}/*.trimmed.fastq)
+do
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+echo "mapping ${name} trimmed reads to D.sim. reference genome"
 
-::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam) 
+minimap2 -t ${nT} -a -x map-ont \
+${dsim_ref} $i |\
+samtools view -b -h -@ ${nT} -o - |\
+samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-dsim.sort.bam
+samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-dsim.sort.bam
+done
+
+for i in $(ls ${trimmed}/*.trimmed.rn.fastq.gz)
+do
+name=$(basename ${i}|sed s/".trimmed.rn.fastq.gz"//g)
+echo "mapping ${name} trimmed reads to D.sim. reference genome"
+
+minimap2 -t ${nT} -a -x map-pb \
+${dsim_ref} $i |\
+samtools view -b -h -@ ${nT} -o - |\
+samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-dsim.sort.bam
+samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-dsim.sort.bam
+done
+
+for i in $(ls ${trimmed}/*.trimmed.rn.fastq.gz)
+do
+name=$(basename ${i}|sed s/".trimmed.rn.fastq.gz"//g)
+echo "mapping ${name} trimmed reads to reference genome"
+
+minimap2 -t ${nT} -a -x map-pb \
+${ref_genome} $i |\
+samtools view -b -h -@ ${nT} -o - |\
+samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-ref.sort.bam
+samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-ref.sort.bam
+done
+
+##GNU parallel keeps failing
+#ls ${aligned_bam}/nv*.trimmed-ref.sort.bam| parallel -j 3 "bedtools intersect -a ${polarizing}/part_ins.bed -b {} > {/.}.bam"
+#parallel -j 10 echo {#}{} ::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
+#parallel -j 10 echo {#}{} ::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam |basename |sed s/.trimmed-ref.sort.bam//g)
+#::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam) 

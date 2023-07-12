@@ -17,19 +17,19 @@ merged_SVs="/home/jenyuw/SV-project/result/merged_SVs"
 
 ## prep
 source ~/.bashrc
-nT=24
+nT=8
 #sample_prefix="{A{1..7},AB8,B{1,2,3,4,6},ORE}"
 # on THOTH
 conda activate sv-calling
 
-## Mapping-based, so we have to map the "trimmed&filtered" ONT reads to the reference genome.
+## Mapping-based, so we have to map the "trimmed&filtered" pacbio CLR reads to the reference genome.
 
 for i in $(ls ${trimmed}/*.trimmed.rn.fastq.gz)
 do
 name=$(basename ${i}|sed s/".trimmed.rn.fastq.gz"//g)
 echo "mapping ${name} trimmed reads to reference genome"
 
-minimap2 -t ${nT} -a -x map-ont \
+minimap2 -t ${nT} -a -x map-pb \
 ${ref_genome} $i |\
 samtools view -b -h -@ ${nT} -o - |\
 samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-ref.sort.bam
