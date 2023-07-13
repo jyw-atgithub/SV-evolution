@@ -72,6 +72,7 @@ cp ${SVs}/${name}-SVIM/variants.vcf ${SVs}/${name}-SVIM.vcf
 done
 
 printf "" > ${SVs}/sample.namelist.txt
+
 for i in $(ls ${SVs}/{A{1..7},AB8,B{1,2,3,4,6},ORE}-*.vcf)
 do
 name=$(basename $i | gawk -F "-" '{print $1}')

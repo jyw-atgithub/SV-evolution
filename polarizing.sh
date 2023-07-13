@@ -13,12 +13,6 @@ ${merged_SVs}/all.consensus-005.vcf.gz 2> /dev/null |\
 bcftools query -f '%CHROM\t%POS\t%INFO/END\t%INFO/SVTYPE\t%INFO/SVLEN\n' |\
 gawk -v len=$len ' $2-len > 0 {print $1 "\t" $2-len "\t" $3+len}' |sort|uniq >${polarizing}/part_ins.bed
 
-for i in $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
-do
-name=$(basename $i|sed s/.trimmed-ref.sort.bam//g)
-bedtools intersect -a ${i} -b ${polarizing}/part_ins.bed >${polarizing}/${name}.part-ins.bam
-done
-
 for i in $(ls ${trimmed}/*.trimmed.fastq)
 do
 name=$(basename ${i}|sed s/".trimmed.fastq"//g)
@@ -43,18 +37,20 @@ samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-dsim.sort.bam
 samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-dsim.sort.bam
 done
 
-for i in $(ls ${trimmed}/*.trimmed.rn.fastq.gz)
+for i in $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
 do
-name=$(basename ${i}|sed s/".trimmed.rn.fastq.gz"//g)
-echo "mapping ${name} trimmed reads to reference genome"
-
-minimap2 -t ${nT} -a -x map-pb \
-${ref_genome} $i |\
-samtools view -b -h -@ ${nT} -o - |\
-samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-ref.sort.bam
-samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-ref.sort.bam
+name=$(basename $i|sed s/.trimmed-ref.sort.bam//g)
+bedtools intersect -a ${i} -b ${polarizing}/part_ins.bed >${polarizing}/${name}.part-ins.bam
 done
 
+for i in $(ls ${aligned_bam}/*.trimmed-dsim.sort.bam)
+do
+name=$(basename $i|sed s/.trimmed-dsim.sort.bam//g)
+bedtools intersect -a ${i} -b ${polarizing}/part_ins.bed >${polarizing}/${name}.dsim.part-ins.bam
+done
+
+samtools merge -o ${polarizing}/all.dmel.part-ins.bam ${polarizing}/*.dmel.part-ins.bam
+samtools merge -o ${polarizing}/all.dsim.part-ins.bam ${polarizing}/*.dsim.part-ins.bam
 ##GNU parallel keeps failing
 #ls ${aligned_bam}/nv*.trimmed-ref.sort.bam| parallel -j 3 "bedtools intersect -a ${polarizing}/part_ins.bed -b {} > {/.}.bam"
 #parallel -j 10 echo {#}{} ::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
