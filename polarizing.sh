@@ -37,6 +37,14 @@ samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-dsim.sort.bam
 samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-dsim.sort.bam
 done
 
+#Do NOT use minimap2 to perform asm-to-asm alignemnt, because it is not good at this.
+#minimap2 -t 10 -a -x asm10 ${dmel_ref} ${dsim_ref} |\
+#samtools view -b -h -@ 10 -o - |\
+#samtools sort -@ 10 -o ${polarizing}/dmel-dsim.sort.bam
+
+nucmer -t 20 --sam-long=${polarizing}/dmel-dsim.sam ${dmel_ref} ${dsim_ref}
+
+
 for i in $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
 do
 name=$(basename $i|sed s/.trimmed-ref.sort.bam//g)
@@ -48,6 +56,7 @@ do
 name=$(basename $i|sed s/.trimmed-dsim.sort.bam//g)
 bedtools intersect -a ${i} -b ${polarizing}/part_ins.bed >${polarizing}/${name}.dsim.part-ins.bam
 done
+
 
 samtools merge -o ${polarizing}/all.dmel.part-ins.bam ${polarizing}/*.dmel.part-ins.bam
 samtools merge -o ${polarizing}/all.dsim.part-ins.bam ${polarizing}/*.dsim.part-ins.bam
