@@ -61,7 +61,7 @@ bedtools intersect -a $1 -b /home/jenyuw/SV-project/result/polarizing/part_ins.b
  }
 export -f doit
 #declare -f doit
-ls ${aligned_bam}/*.trimmed-ref.sort.bam | parallel -j+0 --eta "doit {}"
+ls ${aligned_bam}/*.trimmed-ref.sort.bam | parallel -j 6 --eta "doit {}"
 
 
 ls ${aligned_bam}/SRR2326956*.trimmed-ref.sort.bam | parallel -j+0 --eta "bedtools intersect -a {} -b ${polarizing}/part_ins.bed >${polarizing}/{/.}.part-ins.bam"
