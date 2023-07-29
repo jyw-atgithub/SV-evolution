@@ -47,7 +47,8 @@ nucmer -t 20 --sam-long=${polarizing}/dmel-dsim.sam ${dmel_ref} ${dsim_ref}
 ## origin: https://github.com/mummer4/mummer/issues/24
 
 cat ${polarizing}/dmel-dsim.sam | sed 's/HD\ /HD/; s/1.0\ /1.0/; s/\tSO:coordinate/SO:coordinate/; s/VN1/VN:1/; s/HD/HD\t/; s/SO:unsorted/\tSO:unsorted/; s/@PG /@PG\t/; s/ PN/\tPN/; s/ VN/\tVN/; s/ CL/\tCL/' |\
-samtools view -@ 10 -h --reference ${dmel_ref} - |samtools sort -@ 10 -O bam -o corrected.bam
+samtools view -@ 10 -h --reference ${dmel_ref} - |samtools sort -@ 10 -O bam -o ${polarizing}/corrected.bam
+samtools index -@ 10 ${polarizing}/corrected.bam
 
 for i in $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
 do
@@ -63,8 +64,8 @@ export -f doit
 #declare -f doit
 ls ${aligned_bam}/*.trimmed-ref.sort.bam | parallel -j 6 --eta "doit {}"
 
-
-ls ${aligned_bam}/SRR2326956*.trimmed-ref.sort.bam | parallel -j+0 --eta "bedtools intersect -a {} -b ${polarizing}/part_ins.bed >${polarizing}/{/.}.part-ins.bam"
+# This is much slower. Avoid -j+0.
+#ls ${aligned_bam}/*.trimmed-ref.sort.bam | parallel -j+0 --eta "bedtools intersect -a {} -b ${polarizing}/part_ins.bed >${polarizing}/{/.}.part-ins.bam"
 
 
 for i in $(ls ${aligned_bam}/*.trimmed-dsim.sort.bam)
@@ -74,7 +75,8 @@ bedtools intersect -a ${i} -b ${polarizing}/part_ins.bed >${polarizing}/${name}.
 done
 
 
-samtools merge -o ${polarizing}/all.dmel.part-ins.bam ${polarizing}/*.dmel.part-ins.bam
+samtools merge -f -o ${polarizing}/all.dmel.part-ins.bam ${polarizing}/*.dmel.part-ins.bam
+samtools index -@ 8 ${polarizing}/all.dmel.part-ins.bam
 samtools merge -o ${polarizing}/all.dsim.part-ins.bam ${polarizing}/*.dsim.part-ins.bam
 ##GNU parallel keeps failing
 #ls ${aligned_bam}/nv*.trimmed-ref.sort.bam| parallel -j 3 "bedtools intersect -a ${polarizing}/part_ins.bed -b {} > {/.}.bam"
