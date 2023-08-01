@@ -24,3 +24,37 @@ sed 's/ PN/\tPN/' | sed 's/ VN/\tVN/' | sed 's/ CL/\tCL/' > /dev/null
 
 cat dmel-dsim.sam | sed 's/HD\ /HD/; s/1.0\ /1.0/; s/\tSO:coordinate/SO:coordinate/; s/VN1/VN:1/; s/HD/HD\t/; s/SO:unsorted/\tSO:unsorted/; s/@PG /@PG\t/; s/ PN/\tPN/; s/ VN/\tVN/; s/ CL/\tCL/' |\
 samtools view -@ 10 -h --reference ${dmel_ref} - |samtools sort -@ 10 -O bam -o corrected.bam
+
+
+#!/bin/bash
+#on HYDRA
+trimmed="/home/jenyuw/SV-project-backup/result/trimmed"
+assemble="/home/jenyuw/SV-project-backup/result/assemble"
+
+conda activate assemble
+
+##For NANOPORE
+for i in $(ls ${trimmed}/SRR*.trimmed.fastq)
+do
+name=$(basename ${i}|sed s/".trimmed.fastq"//g)
+
+canu -p ${name} -d ${assemble}/${name}_canu \
+genomeSize=135m \
+maxInputCoverage=90 \
+minReadLength=500 \
+maxThreads=60 \
+-raw -nanopore ${i}
+done
+
+##For PACBIO
+for i in $(ls ${trimmed}/*.trimmed.rn.fastq.gz)
+do
+name=$(basename ${i}|sed s/".trimmed.rn.fastq.gz"//g)
+
+canu -p ${name} -d ${assemble}/${name}_canu \
+genomeSize=135m \
+maxInputCoverage=90 \
+minReadLength=500 \
+maxThreads=60 \
+-raw -pacbio ${i}
+done

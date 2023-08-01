@@ -360,3 +360,7 @@ done
 #s: input string
 #i: start index, 1-based!
 #n: length
+
+python3 /home/jenyuw/Software/compleasm_kit/compleasm.py list --local --library_path /home/jenyuw/Software/compleasm_kit/mb_downloads/
+
+python 3 /home/jenyuw/Software/compleasm_kit/compleasm.py 
