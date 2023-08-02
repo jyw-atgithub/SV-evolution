@@ -8,11 +8,22 @@ assemble="/home/jenyuw/SV-project/result/assemble"
 aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
 polishing="/home/jenyuw/SV-project/result/polishing"
 canu_proc="/home/jenyuw/SV-project/result/canu_processing"
+patched="/home/jenyuw/SV-project/result/patched_contigs"
 scaffold="/home/jenyuw/SV-project/result/scaffold"
 busco_out="/home/jenyuw/SV-project/result/busco_out"
 ## prep
 source ~/.bashrc
 nT=30
+
+## changing the polishing strategy. Simplify everything
+## only 2 kinds workflows!!
+### 1. For Nanopore(with experiment details), medaka*3  --> NextPolish*3
+### 2. For Nanopore(withOUT experiment details) & Pacbio CLR, racon*3  --> NextPolish*3
+### if illumina reads exists, then ADDitional polishing with Pilon
+
+#POLCA???
+
+## After polishing, purge_dups --> rag-tag patch --> rag-tag scaffold
 
 
 ##Polishing with NextPolish
