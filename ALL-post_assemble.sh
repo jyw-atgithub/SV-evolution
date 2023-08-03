@@ -33,11 +33,10 @@ SKIP
 
 
 function polish_Ra { # TWO input argumants
-for k in $(ls $1)
+for k in $(ls $1 2> /dev/null)
 do
 name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${i}//g")
 read=${trimmed}/${name}.trimmed.fastq
-
 read_type=$2
 mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
   if [[ $2!="clr" && $2!="hifi" && $2!="ont" ]]
@@ -67,20 +66,33 @@ done
 ##Polishing with racon
 
 conda activate post-proc #this contain Racon, Ragtag
+fun () {
+echo $* "ECHO"
+ls $*
+echo "LS"
+for k in $(ls $1 2> /dev/null)
+  do
+  echo $k "done!"
+  done
+}
 
 assembler="Flye canu nextdenovo-30"
 for i in $(echo $assembler)
 do
   if [[ $i == "Flye" ]]
   then
-  ls ${assemble}/*_ONT_${i}/assembly.fasta
-  polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont"
+  #ls ${assemble}/*_ONT_${i}/assembly.fasta 2> /dev/null
+  fun ${assemble}/*_ONT_${i}/assembly.fasta
+  #polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont"
   elif [[ $i == "canu" ]]
   then
-  echo "2"
+  #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
+  fun ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta
+  #polish_Ra ${assemble}/*_${i}/*.corrected.contigs.fasta "ont"
   elif [[ $i == "nextdenovo-30" ]]
   then
-  echo "3"
+  #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
+  fun ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta
   fi
 done
 
