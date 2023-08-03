@@ -15,15 +15,78 @@ busco_out="/home/jenyuw/SV-project/result/busco_out"
 source ~/.bashrc
 nT=30
 
-## changing the polishing strategy. Simplify everything
-## only 2 kinds workflows!!
-### 1. For Nanopore(with experiment details), medaka*3  --> NextPolish*3
-### 2. For Nanopore(withOUT experiment details) & Pacbio CLR, racon*3  --> NextPolish*3
-### if illumina reads exists, then ADDitional polishing with Pilon
-
-#POLCA???
-
+## changing the polishing strategy. Simplify everything, only 1 kind workflows!!
+### Racon*3  --> NextPolish*3
+### if illumina reads exists, then ADDitional polishing with POLAC*3 at the FRONT
+### Maybe conpare POLAC with Pilon if illumina reads exists,
 ## After polishing, purge_dups --> rag-tag patch --> rag-tag scaffold
+## Medaka??? No, set aside temporarily because it's only suggested to works on Flye assembly. Also, it requires the experiment info.
+## POLCA performs ok but it also takes Illumina or PacBio Hifi
+: <<'SKIP'
+assembler="Flye"
+bash /home/jenyuw/Software/MaSuRCA-4.1.0/bin/polca.sh \
+-a ${assemble}/nv107_${assembler}/assembly.fasta \
+-r ${trimmed}/nv107.trimmed.r1.fastq \
+-r ${trimmed}/nv107.trimmed.r2.fastq \
+-t ${nT} -m 4G
+SKIP
+
+
+function polish_Ra { # TWO input argumants
+for k in $(ls $1)
+do
+name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${i}//g")
+read=${trimmed}/${name}.trimmed.fastq
+
+read_type=$2
+mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
+  if [[ $2!="clr" && $2!="hifi" && $2!="ont" ]]
+  then
+    echo "The second argument can only be one of \"clr, hifi, ont\""
+  fi
+round=3
+input=${k}
+  for ((count=1; count<=${round};count++))
+  do
+  echo "round $count"
+  minimap2 -x ${mapping_option[$read_type]} -t ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.paf ${input} ${read}
+  #samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+  #samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
+  racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} >${polishing}/${name}.${i}.racon.fasta
+    if ((i!=${round}))
+    then
+      mv ${polishing}/${name}.${i}.racon.fasta ${polishing}/${name}.${i}.racontmp.fasta;
+      input=${polishing}/${name}.${i}.racontmp.fasta
+    fi
+  done
+rm ${aligned_bam}/${name}.trimmed-${i}.paf
+rm ${polishing}/${name}.${i}.racontmp.fasta
+done
+}
+
+##Polishing with racon
+
+conda activate post-proc #this contain Racon, Ragtag
+
+assembler="Flye canu nextdenovo-30"
+for i in $(echo $assembler)
+do
+  if [[ $i == "Flye" ]]
+  then
+  ls ${assemble}/*_ONT_${i}/assembly.fasta
+  polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont"
+  elif [[ $i == "canu" ]]
+  then
+  echo "2"
+  elif [[ $i == "nextdenovo-30" ]]
+  then
+  echo "3"
+  fi
+done
+
+conda deactivate
+
+
 
 
 ##Polishing with NextPolish
