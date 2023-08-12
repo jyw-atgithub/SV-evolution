@@ -35,6 +35,13 @@ SKIP
 function polish_Ra { # TWO input argumants
 for k in $(ls $1 2> /dev/null)
 do
+echo $k
+done
+}
+
+function polish_Ra { # TWO input argumants
+for k in $(ls $1 2> /dev/null)
+do
 name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${i}//g")
 read=${trimmed}/${name}.trimmed.fastq
 read_type=$2
