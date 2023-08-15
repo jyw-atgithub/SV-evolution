@@ -32,12 +32,38 @@ bash /home/jenyuw/Software/MaSuRCA-4.1.0/bin/polca.sh \
 SKIP
 
 
+##frame work here
 function polish_Ra { # TWO input argumants
 for k in $(ls $1 2> /dev/null)
 do
-echo $k
+echo "first arg is " $1
+echo "second arg is " $2
+echo "k is " $k
+name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${i}//g")
+echo $name
+read=${trimmed}/${name}.trimmed.fastq
+read_type=$2
+mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
+  if [[ $2 != "clr" && $2 != "hifi" && $2 != "ont" ]]
+  then
+    echo "The second argument can only be one of \"clr, hifi, ont\""
+  fi
+round=3
+input=${k}
+  for ((count=1; count<=${round};count++))
+  do
+  echo "round $count"
+  echo "minimap2" ${mapping_option[$read_type]}
+  echo "input is" $input
+  echo ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} ${polishing}/${name}.${i}.racon.fasta
+    if ((i!=${round}))
+    then
+      input=${polishing}/${name}.${i}.racontmp.fasta
+    fi
+  done
 done
 }
+
 
 function polish_Ra { # TWO input argumants
 for k in $(ls $1 2> /dev/null)
@@ -72,34 +98,24 @@ done
 
 ##Polishing with racon
 
-conda activate post-proc #this contain Racon, Ragtag
-fun () {
-echo $* "ECHO"
-ls $*
-echo "LS"
-for k in $(ls $1 2> /dev/null)
-  do
-  echo $k "done!"
-  done
-}
-
 assembler="Flye canu nextdenovo-30"
 for i in $(echo $assembler)
 do
   if [[ $i == "Flye" ]]
   then
+  echo "Flye now"
   #ls ${assemble}/*_ONT_${i}/assembly.fasta 2> /dev/null
-  fun ${assemble}/*_ONT_${i}/assembly.fasta
-  #polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont"
+  polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont"
   elif [[ $i == "canu" ]]
   then
+  echo "canu now"
   #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
-  fun ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta
-  #polish_Ra ${assemble}/*_${i}/*.corrected.contigs.fasta "ont"
+  polish_Ra "${assemble}/*_ONT_${i}/*.corrected.contigs.fasta" "ont"
   elif [[ $i == "nextdenovo-30" ]]
   then
+  echo "nextdenovo now"
   #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
-  fun ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta
+  polish_Ra "${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta" "ont"
   fi
 done
 
