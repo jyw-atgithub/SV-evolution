@@ -33,14 +33,14 @@ SKIP
 
 
 ##frame work here
-function polish_Ra { # TWO input argumants
+function polish_Ra { # THREE input argumants:path tech rounds
 for k in $(ls $1 2> /dev/null)
 do
-echo "first arg is " $1
-echo "second arg is " $2
+#echo "first arg is " $1
+#echo "second arg is " $2
 echo "k is " $k
 name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${i}//g")
-echo $name
+#echo $name
 read=${trimmed}/${name}.trimmed.fastq
 read_type=$2
 mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
@@ -48,46 +48,16 @@ mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
   then
     echo "The second argument can only be one of \"clr, hifi, ont\""
   fi
-round=3
+round=$3
 input=${k}
   for ((count=1; count<=${round};count++))
   do
   echo "round $count"
-  echo "minimap2" ${mapping_option[$read_type]}
   echo "input is" $input
-  echo ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} ${polishing}/${name}.${i}.racon.fasta
-    if ((i!=${round}))
-    then
-      input=${polishing}/${name}.${i}.racontmp.fasta
-    fi
-  done
-done
-}
-
-
-function polish_Ra { # TWO input argumants
-for k in $(ls $1 2> /dev/null)
-do
-name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${i}//g")
-read=${trimmed}/${name}.trimmed.fastq
-read_type=$2
-mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
-  if [[ $2!="clr" && $2!="hifi" && $2!="ont" ]]
-  then
-    echo "The second argument can only be one of \"clr, hifi, ont\""
-  fi
-round=3
-input=${k}
-  for ((count=1; count<=${round};count++))
-  do
-  echo "round $count"
   minimap2 -x ${mapping_option[$read_type]} -t ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.paf ${input} ${read}
-  #samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-  #samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
   racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} >${polishing}/${name}.${i}.racon.fasta
     if ((i!=${round}))
     then
-      mv ${polishing}/${name}.${i}.racon.fasta ${polishing}/${name}.${i}.racontmp.fasta;
       input=${polishing}/${name}.${i}.racontmp.fasta
     fi
   done
@@ -96,37 +66,53 @@ rm ${polishing}/${name}.${i}.racontmp.fasta
 done
 }
 
-##Polishing with racon
 
+function polish_Np { # THREE input argumants:path tech rounds
+for j in $(ls $1 2> /dev/null)
+do
+name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
+round=$3
+read=${trimmed}/${name}.trimmed.fastq
+read_type=$2 #{clr,hifi,ont}
+mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
+  if [[ $2 != "clr" && $2 != "hifi" && $2 != "ont" ]]
+  then
+    echo "The second argument can only be one of \"clr, hifi, ont\""
+  fi
+input=${j}
+done 
+}
+
+##Polishing with racon
+conda activate post-proc
 assembler="Flye canu nextdenovo-30"
+
 for i in $(echo $assembler)
 do
   if [[ $i == "Flye" ]]
   then
-  echo "Flye now"
+  echo "$i now"
   #ls ${assemble}/*_ONT_${i}/assembly.fasta 2> /dev/null
-  polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont"
+  polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont" "3"
   elif [[ $i == "canu" ]]
   then
-  echo "canu now"
+  echo "$i now"
   #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
-  polish_Ra "${assemble}/*_ONT_${i}/*.corrected.contigs.fasta" "ont"
+  polish_Ra "${assemble}/*_ONT_${i}/*.corrected.contigs.fasta" "ont" "3"
   elif [[ $i == "nextdenovo-30" ]]
   then
-  echo "nextdenovo now"
+  echo "$i now"
   #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
-  polish_Ra "${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta" "ont"
+  polish_Ra "${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
   fi
 done
 
 conda deactivate
 
-
-
-
 ##Polishing with NextPolish
 ##nv samples
 assembler="Flye"
+
 for j in $(ls ${assemble}/nv*_${assembler}/assembly.fasta)
 do
 name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
