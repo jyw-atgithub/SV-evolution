@@ -32,8 +32,9 @@ bash /home/jenyuw/Software/MaSuRCA-4.1.0/bin/polca.sh \
 SKIP
 
 
-##frame work here
-function polish_Ra { # THREE input argumants:path tech rounds
+function polish_Ra {
+# THREE input argumants:"path" tech rounds
+# ${i} will be one of the assemblers
 for k in $(ls $1 2> /dev/null)
 do
 #echo "first arg is " $1
@@ -67,7 +68,9 @@ done
 }
 
 
-function polish_Np { # THREE input argumants:path tech rounds
+function polish_Np { 
+# THREE input argumants:"path" tech rounds
+# ${i} will be one of the assemblers
 for j in $(ls $1 2> /dev/null)
 do
 name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
@@ -80,7 +83,25 @@ mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
     echo "The second argument can only be one of \"clr, hifi, ont\""
   fi
 input=${j}
-done 
+  for ((count=1; count<=${round};count++))
+  do
+  echo "round $count"
+  echo "input is" $input
+  minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
+  samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.sort.bam
+  samtools index ${aligned_bam}/${name}.trimmed-${i}.sort.bam
+  ls ${aligned_bam}/${name}.trimmed-${i}.sort.bam > ${polishing}/lgs.sort.bam.fofn
+  python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
+  -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${i}.nextpolish.fasta
+    if ((i!=${round}));then
+        mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.${i}.nextpolishtmp.fasta;
+        input=${polishing}/${name}.${i}.nextpolishtmp.fasta;
+    fi;
+  done
+rm ${polishing}/${name}.${i}.nextpolishtmp.fasta
+rm ${aligned_bam}/${name}.trimmed-${i}.sort.bam
+rm ${aligned_bam}/${name}.trimmed-${i}.sort.bam.bai
+done
 }
 
 ##Polishing with racon
@@ -108,6 +129,33 @@ do
 done
 
 conda deactivate
+
+
+##Polishing with NextPolish
+assembler="Flye canu nextdenovo-30"
+
+for i in $(echo $assembler)
+do
+  if [[ $i == "Flye" ]]
+  then
+  echo "$i now"
+  #ls ${assemble}/*_ONT_${i}/assembly.fasta 2> /dev/null
+  polish_Np "${assemble}/*_ONT_${i}/assembly.fasta" "ont" "3"
+  elif [[ $i == "canu" ]]
+  then
+  echo "$i now"
+  #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
+  polish_Np "${assemble}/*_ONT_${i}/*.corrected.contigs.fasta" "ont" "3"
+  elif [[ $i == "nextdenovo-30" ]]
+  then
+  echo "$i now"
+  #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
+  polish_Np "${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
+  fi
+done
+
+
+
 
 ##Polishing with NextPolish
 ##nv samples
