@@ -59,6 +59,7 @@ input=${k}
   racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} >${polishing}/${name}.${i}.racon.fasta
     if ((i!=${round}))
     then
+      mv ${polishing}/${name}.${i}.racon.fasta ${polishing}/${name}.${i}.racontmp.fasta
       input=${polishing}/${name}.${i}.racontmp.fasta
     fi
   done
@@ -139,18 +140,15 @@ do
   if [[ $i == "Flye" ]]
   then
   echo "$i now"
-  #ls ${assemble}/*_ONT_${i}/assembly.fasta 2> /dev/null
-  polish_Np "${assemble}/*_ONT_${i}/assembly.fasta" "ont" "3"
+  polish_Np "${polishing}/${name}.${i}.racon.fasta" "ont" "3"
   elif [[ $i == "canu" ]]
   then
   echo "$i now"
-  #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
-  polish_Np "${assemble}/*_ONT_${i}/*.corrected.contigs.fasta" "ont" "3"
+  polish_Np "${polishing}/${name}.${i}.racon.fasta" "ont" "3"
   elif [[ $i == "nextdenovo-30" ]]
   then
   echo "$i now"
-  #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
-  polish_Np "${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
+  polish_Np "${polishing}/${name}.${i}.racon.fasta" "ont" "3"
   fi
 done
 
