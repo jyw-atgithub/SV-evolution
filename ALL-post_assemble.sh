@@ -31,7 +31,6 @@ bash /home/jenyuw/Software/MaSuRCA-4.1.0/bin/polca.sh \
 -t ${nT} -m 4G
 SKIP
 
-
 function polish_Ra {
 # THREE input argumants:"path" tech rounds
 # ${i} will be one of the assemblers
@@ -57,7 +56,7 @@ input=${k}
   echo "input is" $input
   minimap2 -x ${mapping_option[$read_type]} -t ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.paf ${input} ${read}
   racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} >${polishing}/${name}.${i}.racon.fasta
-    if ((i!=${round}))
+    if ((${count}!=${round}))
     then
       mv ${polishing}/${name}.${i}.racon.fasta ${polishing}/${name}.${i}.racontmp.fasta
       input=${polishing}/${name}.${i}.racontmp.fasta
@@ -68,13 +67,14 @@ rm ${polishing}/${name}.${i}.racontmp.fasta
 done
 }
 
-
-function polish_Np { 
+function polish_Np {
 # THREE input argumants:"path" tech rounds
 # ${i} will be one of the assemblers
 for j in $(ls $1 2> /dev/null)
 do
-name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
+echo "polish_Np starts"
+name=`echo $j|gawk -F "/" '{print $7}'|gawk -F "." '{print $1}'`
+echo "name is $name"
 round=$3
 read=${trimmed}/${name}.trimmed.fastq
 read_type=$2 #{clr,hifi,ont}
@@ -94,8 +94,8 @@ input=${j}
   ls ${aligned_bam}/${name}.trimmed-${i}.sort.bam > ${polishing}/lgs.sort.bam.fofn
   python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
   -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${i}.nextpolish.fasta
-    if ((i!=${round}));then
-        mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.${i}.nextpolishtmp.fasta;
+    if ((${count}!=${round}));then
+        mv ${polishing}/${name}.${i}.nextpolish.fasta ${polishing}/${name}.${i}.nextpolishtmp.fasta;
         input=${polishing}/${name}.${i}.nextpolishtmp.fasta;
     fi;
   done
@@ -105,59 +105,99 @@ rm ${aligned_bam}/${name}.trimmed-${i}.sort.bam.bai
 done
 }
 
-##Polishing with racon
+
+##Actual Polishing with racon, NCBI ONT data
 conda activate post-proc
 assembler="Flye canu nextdenovo-30"
 
-for i in $(echo $assembler)
+for i in `echo $assembler`
 do
   if [[ $i == "Flye" ]]
   then
-  echo "$i now"
+  echo "racon $i now"
   #ls ${assemble}/*_ONT_${i}/assembly.fasta 2> /dev/null
   polish_Ra "${assemble}/*_ONT_${i}/assembly.fasta" "ont" "3"
   elif [[ $i == "canu" ]]
   then
-  echo "$i now"
+  echo "racon $i now"
   #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
-  polish_Ra "${assemble}/*_ONT_${i}/*.corrected.contigs.fasta" "ont" "3"
+  polish_Ra "${assemble}/*_ONT_${i}/*.contigs.fasta" "ont" "3"
   elif [[ $i == "nextdenovo-30" ]]
   then
-  echo "$i now"
+  echo "racon $i now"
   #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
   polish_Ra "${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
   fi
 done
-
 conda deactivate
 
-
-##Polishing with NextPolish
+## Actual Polishing with NextPolish, NCBI ONT data
 assembler="Flye canu nextdenovo-30"
 
 for i in $(echo $assembler)
 do
   if [[ $i == "Flye" ]]
   then
-  echo "$i now"
-  polish_Np "${polishing}/${name}.${i}.racon.fasta" "ont" "3"
+  echo "Nextpolish $i now"
+  #ls ${assemble}/*_ONT_${i}/assembly.fasta 2> /dev/null
+  polish_Np "${polishing}/*_ONT.${i}.racon.fasta" "ont" "3"
   elif [[ $i == "canu" ]]
   then
-  echo "$i now"
-  polish_Np "${polishing}/${name}.${i}.racon.fasta" "ont" "3"
+  echo "Nestpolish $i now"
+  #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
+  polish_Np "${polishing}/*_ONT.${i}.racon.fasta" "ont" "3"
   elif [[ $i == "nextdenovo-30" ]]
   then
-  echo "$i now"
-  polish_Np "${polishing}/${name}.${i}.racon.fasta" "ont" "3"
+  echo "Nextpolish $i now"
+  #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
+  polish_Np "${polishing}/*_ONT.${i}.racon.fasta" "ont" "3"
+  fi
+done
+
+
+##nv samples
+conda activate post-proc
+assembler="Flye canu nextdenovo-30"
+
+for i in `echo $assembler`
+do
+  if [[ $i == "Flye" ]]
+  then
+  echo "racon $i now"
+  polish_Ra "${assemble}/nv*_${i}/assembly.fasta" "ont" "3"
+  elif [[ $i == "canu" ]]
+  then
+  echo "racon $i now"
+  polish_Ra "${assemble}/nv*_${i}/*.contigs.fasta" "ont" "3"
+  elif [[ $i == "nextdenovo-30" ]]
+  then
+  echo "racon $i now"
+  polish_Ra "${assemble}/nv*_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
+  fi
+done
+conda deactivate
+
+assembler="Flye canu nextdenovo-30"
+for i in $(echo $assembler)
+do
+  if [[ $i == "Flye" ]]
+  then
+  echo "Nextpolish $i now"
+  polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
+  elif [[ $i == "canu" ]]
+  then
+  echo "Nestpolish $i now"
+  polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
+  elif [[ $i == "nextdenovo-30" ]]
+  then
+  echo "Nextpolish $i now"
+  polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
   fi
 done
 
 
 
 
-##Polishing with NextPolish
-##nv samples
-assembler="Flye"
 
 for j in $(ls ${assemble}/nv*_${assembler}/assembly.fasta)
 do
