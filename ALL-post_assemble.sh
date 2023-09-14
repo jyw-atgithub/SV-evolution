@@ -195,7 +195,46 @@ do
   fi
 done
 
+##DSPR samples
 
+conda activate post-proc
+assembler="Flye canu nextdenovo-30"
+prefix="{A{1..7},AB8,B{{1..4},6}}"
+for i in `echo $assembler`
+do
+  if [[ $i == "Flye" ]]
+  then
+  echo "racon $i now"
+  polish_Ra "${assemble}/${prefix}_${i}/assembly.fasta" "clr" "3"
+  elif [[ $i == "canu" ]]
+  then
+  echo "racon $i now"
+  polish_Ra "${assemble}/${prefix}_${i}/*.contigs.fasta" "clr" "3"
+  elif [[ $i == "nextdenovo-30" ]]
+  then
+  echo "racon $i now"
+  polish_Ra "${assemble}/${prefix}_${i}/03.ctg_graph/nd.asm.fasta" "clr" "3"
+  fi
+done
+conda deactivate
+
+assembler="Flye canu nextdenovo-30"
+for i in $(echo $assembler)
+do
+  if [[ $i == "Flye" ]]
+  then
+  echo "Nextpolish $i now"
+  polish_Np "${polishing}/${prefix}.${i}.racon.fasta" "clr" "3"
+  elif [[ $i == "canu" ]]
+  then
+  echo "Nestpolish $i now"
+  polish_Np "${polishing}/${prefix}.${i}.racon.fasta" "clr" "3"
+  elif [[ $i == "nextdenovo-30" ]]
+  then
+  echo "Nextpolish $i now"
+  polish_Np "${polishing}/${prefix}.${i}.racon.fasta" "clr" "3"
+  fi
+done
 
 
 
@@ -230,9 +269,11 @@ rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
 rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
 done
 
+##For NextPolish
 ##According to the author, making the loops manually is faster than using the package.
 ##The BWA contained in the original package is broken. We need to `git clone` the original bwa, so the installation (make) can be success. 
 ##because there both python2 and python3, change the shebang line as "#!/usr/bin/env python3"
+## Ref:https://nextpolish.readthedocs.io/en/latest/TUTORIAL.html
 
 conda activate assemble #this is for bwa-mem2
 
