@@ -514,7 +514,7 @@ done
 
 conda activate busco
 # BUSCO score of non-polished assembly
-assembler="Flye-meta Flye-meta-scfd"
+assembler="Flye"
 for i in $(ls ${assemble}/*_${assembler}/assembly.fasta)
 do
 strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${assembler}//g")
@@ -541,15 +541,13 @@ do
     done
 done
 
-assembler="nextdenovo-30"
-for a in `echo $assembler`
+
+# BUSCO score of POLISHED assembly
+for i in $(ls ${polishing}/*.fasta)
 do
-    for i in $(ls ${assemble}/{A{1..7},AB8,B{1,2,3,4,6},ORE}_${a}/03.ctg_graph/nd.asm.fasta)
-    do
-    strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${a}//g")
-    echo $strain
-    busco -i ${i} --out_path ${busco_out} -o ${strain}_${a} -m genome --cpu 20 -l diptera_odb10
-    done
+name=$(basename ${i}|sed s/.fasta// )
+echo $name 
+busco -i ${i} --out_path ${busco_out} -o ${name} -m genome --cpu 20 -l diptera_odb10
 done
 
 #collect the BUSCO scores
@@ -562,21 +560,6 @@ do
     grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${name}\t${a}"
     done
 done 
-
-# BUSCO score of POLISHED assembly
-for i in $(ls ${polishing}/nv*.pilon.fasta)
-do
-name=$(basename ${i}|sed s/.fasta// )
-echo $name 
-busco -i ${i} --out_path ${busco_out} -o ${name} -m genome --cpu 20 -l diptera_odb10
-done
-
-for i in $(ls ${polishing}/*.Flye.racon.fasta)
-do
-name=$(basename ${i}|sed s/.fasta// )
-echo $name 
-busco -i ${i} --out_path ${busco_out} -o ${name} -m genome --cpu 20 -l diptera_odb10
-done
 
 #awk '{print substr(s, i, n)}' substr function accepts three arguments
 #s: input string
