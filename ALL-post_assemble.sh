@@ -11,6 +11,7 @@ canu_proc="/home/jenyuw/SV-project/result/canu_processing"
 patched="/home/jenyuw/SV-project/result/patched_contigs"
 scaffold="/home/jenyuw/SV-project/result/scaffold"
 busco_out="/home/jenyuw/SV-project/result/busco_out"
+compleasm_out="/home/jenyuw/SV-project/result/compleasm_out"
 ## prep
 source ~/.bashrc
 nT=30
@@ -523,7 +524,7 @@ busco -i ${i} --out_path ${busco_out} -o ${strain}_${assembler} -m genome --cpu 
 done
 
 assembler="canu"
-for i in $(ls ${assemble}/*_${assembler}/*.corrected.contigs.fasta)
+for i in $(ls ${assemble}/*_${assembler}/*.contigs.fasta)
 do
 strain=$(echo $i | gawk -F "/" '{print $7}'| sed "s/_${assembler}//g")
 echo $strain
@@ -557,9 +558,22 @@ do
     for i in $(ls ${busco_out}/*_${a}/short_summary.specific.diptera_odb10.*.txt)
     do
     name=$(echo $i| gawk -F "/" ' {print $7}' | sed "s/_${a}//g")
-    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${name}\t${a}"
+    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${name}\t${a}\t"original""
     done
-done 
+done
+
+assembler="canu Flye nextdenovo nextdenovo-30"
+for a in $(echo ${assembler} )
+do
+    for i in $(ls ${busco_out}/*.${a}.*/short_summary.specific.diptera_odb10.*.txt)
+    do
+    strain=$(echo $i| gawk -F "/" ' {print $7}' | gawk -F "." ' {print $1}')
+    ass=$(echo $i| gawk -F "/" ' {print $7}' | gawk -F "." ' {print $2}')
+    polisher=$(echo $i| gawk -F "/" ' {print $7}' | gawk -F "." ' {print $3}')
+    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${strain}\t${ass}\t${polisher}"
+    done
+done
+
 
 #awk '{print substr(s, i, n)}' substr function accepts three arguments
 #s: input string
@@ -568,4 +582,9 @@ done
 
 python3 /home/jenyuw/Software/compleasm_kit/compleasm.py list --local --library_path /home/jenyuw/Software/compleasm_kit/mb_downloads/
 
-python 3 /home/jenyuw/Software/compleasm_kit/compleasm.py 
+for i in $(ls ${polishing}/*.fasta)
+do
+name=$(basename ${i}|sed s/.fasta// )
+python3 /home/jenyuw/Software/compleasm_kit/compleasm.py run  -a $i -o ${compleasm_out}/${name} -t 8 \
+-l diptera -L "/home/jenyuw/Software/compleasm_kit/mb_downloads/"
+done
