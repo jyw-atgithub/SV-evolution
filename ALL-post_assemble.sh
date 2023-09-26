@@ -1,17 +1,14 @@
 #!/bin/bash
 ## path
-ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
-raw="/home/jenyuw/SV-project/raw"
-qc_report="/home/jenyuw/SV-project/result/qc_report"
-trimmed="/home/jenyuw/SV-project/result/trimmed"
-assemble="/home/jenyuw/SV-project/result/assemble"
-aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
-polishing="/home/jenyuw/SV-project/result/polishing"
-canu_proc="/home/jenyuw/SV-project/result/canu_processing"
-patched="/home/jenyuw/SV-project/result/patched_contigs"
-scaffold="/home/jenyuw/SV-project/result/scaffold"
-busco_out="/home/jenyuw/SV-project/result/busco_out"
-compleasm_out="/home/jenyuw/SV-project/result/compleasm_out"
+assembler="canu Flye nextdenovo nextdenovo-30"
+for a in $(echo ${assembler} )
+do
+    for i in $(ls ${busco_out}/*_${a}/short_summary.specific.diptera_odb10.*.txt)
+    do
+    name=$(echo $i| gawk -F "/" ' {print $7}' | sed "s/_${a}//g")
+    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n"|tr -d "["|tr -d "%" && echo -e "\t${name}\t${a}\t"original"\t"busco""
+    done
+done
 ## prep
 source ~/.bashrc
 nT=30
@@ -559,19 +556,19 @@ do
     for i in $(ls ${busco_out}/*_${a}/short_summary.specific.diptera_odb10.*.txt)
     do
     name=$(echo $i| gawk -F "/" ' {print $7}' | sed "s/_${a}//g")
-    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${name}\t${a}\t"original""
+    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n"|tr -d "["|tr -d "%" && echo -e "\t${name}\t${a}\t"original"\t"busco""
     done
 done
 ## Polished assembly
 assembler="canu Flye nextdenovo nextdenovo-30"
 for a in $(echo ${assembler} )
 do
-    for i in $(ls ${busco_out}/*.${a}.*/short_summary.specific.diptera_odb10.*.txt)
+    for i in $(ls ${busco_out}/*.${a}.*/short_summary.specific.diptera_odb10.*.txt 2>/dev/null)
     do
     strain=$(echo $i| gawk -F "/" ' {print $7}' | gawk -F "." ' {print $1}')
     ass=$(echo $i| gawk -F "/" ' {print $7}' | gawk -F "." ' {print $2}')
     polisher=$(echo $i| gawk -F "/" ' {print $7}' | gawk -F "." ' {print $3}')
-    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" && echo -e "\t${strain}\t${ass}\t${polisher}"
+    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" |tr -d "[" |tr -d "%"&& echo -e "\t${strain}\t${ass}\t${polisher}\t"busco""
     done
 done
 
@@ -623,3 +620,12 @@ python3 /home/jenyuw/Software/compleasm_kit/compleasm.py run  -a $i -o ${complea
 -l diptera -L "/home/jenyuw/Software/compleasm_kit/mb_downloads/"
 done
 
+## Collect the Compleasm scores
+for i in $(ls ${compleasm_out}/*/summary.txt)
+do
+strain=$(echo $i|gawk -F "/" '{print $7}'|gawk -F "." '{print $1}')
+ass=$(echo $i|gawk -F "/" '{print $7}'|gawk -F "." '{print $2}')
+polisher=$(echo $i|gawk -F "/" '{print $7}'|gawk -F "." '{print $3}')
+grep "S:" $i |gawk -F "%" '{print $1}'|tr -d "\n|sed s/"S:"//g"
+echo -e "\t${strain}\t${ass}\t${polisher}\t"compleasm""
+done
