@@ -1,4 +1,13 @@
 ## Fragments
+
+
+srun -A jje_lab -c 4 --pty --x11 bash -i
+cd /pub/jenyuw/
+
+sbank balance statement -a jje_lab
+sbank balance statement -u jenyuw
+
+
 : <<'SKIP'
 SKIP
 

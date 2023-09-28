@@ -106,7 +106,7 @@ done
 
 ##Actual Polishing with racon, NCBI ONT data
 conda activate post-proc
-assembler="Flye canu nextdenovo-30"
+assembler="nextdenovo"
 
 for i in `echo $assembler`
 do
@@ -120,17 +120,19 @@ do
   echo "racon $i now"
   #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
   polish_Ra "${assemble}/*_ONT_${i}/*.contigs.fasta" "ont" "3"
-  elif [[ $i == "nextdenovo-30" ]]
+  elif [[ $i == "nextdenovo" ]]
   then
   echo "racon $i now"
   #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
   polish_Ra "${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
+  else
+  echo "NO such assembler was used"
   fi
 done
 conda deactivate
 
 ## Actual Polishing with NextPolish, NCBI ONT data
-assembler="Flye canu nextdenovo-30"
+assembler="nextdenovo"
 
 for i in $(echo $assembler)
 do
@@ -144,18 +146,20 @@ do
   echo "Nestpolish $i now"
   #ls ${assemble}/*_ONT_${i}/*.corrected.contigs.fasta 2> /dev/null
   polish_Np "${polishing}/*_ONT.${i}.racon.fasta" "ont" "3"
-  elif [[ $i == "nextdenovo-30" ]]
+  elif [[ $i == "nextdenovo" ]]
   then
   echo "Nextpolish $i now"
   #ls ${assemble}/*_ONT_${i}/03.ctg_graph/nd.asm.fasta 2> /dev/null
   polish_Np "${polishing}/*_ONT.${i}.racon.fasta" "ont" "3"
+  else
+  echo "NO such assembler was used"
   fi
 done
 
 
 ##nv samples
 conda activate post-proc
-assembler="Flye canu nextdenovo-30"
+assembler="nextdenovo"
 
 for i in `echo $assembler`
 do
@@ -167,15 +171,17 @@ do
   then
   echo "racon $i now"
   polish_Ra "${assemble}/nv*_${i}/*.contigs.fasta" "ont" "3"
-  elif [[ $i == "nextdenovo-30" ]]
+  elif [[ $i == "nextdenovo" ]]
   then
   echo "racon $i now"
   polish_Ra "${assemble}/nv*_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
+  else
+  echo "NO such assembler was used"
   fi
 done
 conda deactivate
 
-assembler="Flye canu nextdenovo-30"
+assembler="nextdenovo"
 for i in $(echo $assembler)
 do
   if [[ $i == "Flye" ]]
@@ -186,17 +192,19 @@ do
   then
   echo "Nestpolish $i now"
   polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
-  elif [[ $i == "nextdenovo-30" ]]
+  elif [[ $i == "nextdenovo" ]]
   then
   echo "Nextpolish $i now"
   polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
+  else
+  echo "NO such assembler was used"
   fi
 done
 
 ##DSPR samples
 
 conda activate post-proc
-assembler="Flye canu nextdenovo-30"
+assembler="nextdenovo"
 prefix="{A{1..7},AB8,B{{1..4},6}}"
 for i in `echo $assembler`
 do
@@ -212,11 +220,13 @@ do
   then
   echo "racon $i now"
   polish_Ra "${assemble}/${prefix}_${i}/03.ctg_graph/nd.asm.fasta" "clr" "3"
+  else
+  echo "NO such assembler was used"
   fi
 done
 conda deactivate
 
-assembler="Flye canu nextdenovo-30"
+assembler="nextdenovo"
 for i in $(echo $assembler)
 do
   if [[ $i == "Flye" ]]
@@ -231,6 +241,8 @@ do
   then
   echo "Nextpolish $i now"
   polish_Np "${polishing}/${prefix}.${i}.racon.fasta" "clr" "3"
+  else
+  echo "NO such assembler was used"
   fi
 done
 

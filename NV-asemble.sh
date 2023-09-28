@@ -81,6 +81,7 @@ minReadLength=500 \
 done
 
 ## Long-read assembly with nextDenovo
+## After installing NextDenovo for the first time, remember to change the shebang line as "python3". The original is "python"
 
 for i in $(ls ${trimmed}/nv*.trimmed.fastq)
 do
