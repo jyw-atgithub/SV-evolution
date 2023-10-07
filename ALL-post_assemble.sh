@@ -1,17 +1,20 @@
 #!/bin/bash
 ## path
-assembler="canu Flye nextdenovo nextdenovo-30"
-for a in $(echo ${assembler} )
-do
-    for i in $(ls ${busco_out}/*_${a}/short_summary.specific.diptera_odb10.*.txt)
-    do
-    name=$(echo $i| gawk -F "/" ' {print $7}' | sed "s/_${a}//g")
-    grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n"|tr -d "["|tr -d "%" && echo -e "\t${name}\t${a}\t"original"\t"busco""
-    done
-done
+ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
+raw="/home/jenyuw/SV-project/raw"
+qc_report="/home/jenyuw/SV-project/result/qc_report"
+trimmed="/home/jenyuw/SV-project/result/trimmed"
+assemble="/home/jenyuw/SV-project/result/assemble"
+aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
+polishing="/home/jenyuw/SV-project/result/polishing"
+canu_proc="/home/jenyuw/SV-project/result/canu_processing"
+patched="/home/jenyuw/SV-project/result/patched_contigs"
+scaffold="/home/jenyuw/SV-project/result/scaffold"
+busco_out="/home/jenyuw/SV-project/result/busco_out"
 ## prep
 source ~/.bashrc
-nT=30
+nT=20
+
 
 ## changing the polishing strategy. Simplify everything, only 1 kind workflows!!
 ### Racon*3  --> NextPolish*3
@@ -446,18 +449,18 @@ pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
 
 ls ${trimmed}/nv107.trimmed.fastq >${purge_dups}/read.fofn
 python3 ${pd_scripts}/pd_config.py \
-    -l ${purge_dups} \
+    -l ${purge_dups}/nv107_Flye \
     -n ${purge_dups}/TESTconfig.json \
     ${assemble}/nv107_Flye/assembly.fasta \
     ${purge_dups}/read.fofn
-
+nT="2"
 echo -e "
 {
   \"cc\": {
     \"fofn\": \"${purge_dups}/read.fofn\",
     \"isdip\": 1,
-    \"core\": 12,
-    \"mem\": 40000,
+    \"core\": ${nT},
+    \"mem\": 60000,
     \"queue\": \"normal\",
     \"mnmp_opt\": \"\",
     \"bwa_opt\": \"\",
@@ -465,37 +468,37 @@ echo -e "
     \"skip\": 0
   },
   \"sa\": {
-    \"core\": 12,
-    \"mem\": 20000,
+    \"core\": ${nT},
+    \"mem\": 40000,
     \"queue\": \"normal\"
   },
   \"busco\": {
-    \"core\": 12,
-    \"mem\": 40000,
+    \"core\": ${nT},
+    \"mem\": 60000,
     \"queue\": \"long\",
     \"skip\": 0,
-    \"lineage\": \"diptera\",
+    \"lineage\": \"diptera_odb10\",
     \"prefix\": \"assembly_purged\",
     \"tmpdir\": \"busco_tmp\"
   },
   \"pd\": {
-    \"mem\": 40000,
+    \"mem\": 60000,
     \"queue\": \"normal\"
   },
   \"gs\": {
-    \"mem\": 20000,
+    \"mem\": 60000,
     \"oe\": 1
   },
   \"kcp\": {
-    \"core\": 12,
+    \"core\": ${nT},
     \"mem\": 60000,
     \"fofn\": \"\",
     \"prefix\": \"assembly_purged_kcm\",
     \"tmpdir\": \"kcp_tmp\",
     \"skip\": 1
   },
-  \"ref\": "\"/home/jenyuw/SV-project/result/purge_dups/assembly.fasta\"",
-  \"out_dir\": "\"${purge_dups}/test\""
+  \"ref\": "\"/home/jenyuw/SV-project/result/purge_dups/nv107_Flye/assembly.fasta\"",
+  \"out_dir\": "\"${purge_dups}/nv107_Flye\""
 }" >${purge_dups}/TESTconfig.json
 
 python3 ${pd_scripts}/run_purge_dups.py \
