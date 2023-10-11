@@ -448,10 +448,11 @@ purge_dups="/home/jenyuw/SV-project/result/purge_dups"
 pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
 
 ls ${trimmed}/nv107.trimmed.fastq >${purge_dups}/read.fofn
+
 python3 ${pd_scripts}/pd_config.py \
-    -l ${purge_dups}/nv107_Flye \
+    -l ${purge_dups}/nv107.canu.nextpolish \
     -n ${purge_dups}/TESTconfig.json \
-    ${assemble}/nv107_Flye/assembly.fasta \
+    ${polishing}/nv107.canu.nextpolish.fasta \
     ${purge_dups}/read.fofn
 nT="2"
 echo -e "
@@ -503,7 +504,7 @@ echo -e "
 
 python3 ${pd_scripts}/run_purge_dups.py \
     --platform bash --wait 1 --retries 3 \
-    ${purge_dups}/TESTconfig.json /home/jenyuw/Software/purge_dups/bin nv107
+    ${purge_dups}/TESTconfig.json /home/jenyuw/Software/purge_dups/bin SPID
 
 ##Patching
 
