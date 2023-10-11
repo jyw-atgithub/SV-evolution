@@ -185,19 +185,17 @@ done
 conda deactivate
 
 assembler="nextdenovo"
-for i in $(echo $assembler)
-do
-  if [[ $i == "Flye" ]]
-  then
-  echo "Nextpolish $i now"
-  polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
-  elif [[ $i == "canu" ]]
-  then
-  echo "Nestpolish $i now"
-  polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
-  elif [[ $i == "nextdenovo" ]]
-  then
-  echo "Nextpolish $i now"
+for i in $(echo $assembler)ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
+raw="/home/jenyuw/SV-project/raw"
+qc_report="/home/jenyuw/SV-project/result/qc_report"
+trimmed="/home/jenyuw/SV-project/result/trimmed"
+assemble="/home/jenyuw/SV-project/result/assemble"
+aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
+polishing="/home/jenyuw/SV-project/result/polishing"
+canu_proc="/home/jenyuw/SV-project/result/canu_processing"
+patched="/home/jenyuw/SV-project/result/patched_contigs"
+scaffold="/home/jenyuw/SV-project/result/scaffold"
+busco_out="/home/jenyuw/SV-project/result/busco_out"
   polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
   else
   echo "NO such assembler was used"
@@ -505,6 +503,24 @@ echo -e "
 python3 ${pd_scripts}/run_purge_dups.py \
     --platform bash --wait 1 --retries 3 \
     ${purge_dups}/TESTconfig.json /home/jenyuw/Software/purge_dups/bin SPID
+
+## purge_dups as a pipeline
+purge_dups="/home/jenyuw/SV-project/result/purge_dups"
+pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
+pd_bin="/home/jenyuw/Software/purge_dups/bin"
+
+
+minimap2 -t 6 -x map-pb ${polishing}/nv107.canu.nextpolish.fasta ${trimmed}/nv107.trimmed.fastq | pigz -p 6 -c - > ${purge_dups}/nv107.c.np.paf.gz
+
+${pd_bin}/pbcstat ${purge_dups}/nv107.c.np.paf.gz
+${pd_bin}/calcuts PB.stat > cutoffs 2>calcults.log
+
+bin/split_fa ${polishing}/nv107.canu.nextpolish.fasta > ${purge_dups}/nv107.c.np.split
+minimap2 -x asm5 -DP ${purge_dups}/nv107.c.np.split ${purge_dups}/nv107.c.np.split | pigz -p 6 -c - > nv107.c.np.split.self.paf.gz
+
+
+
+
 
 ##Patching
 
