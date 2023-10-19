@@ -205,7 +205,6 @@ do
 done
 
 
-
 ##DSPR samples
 
 conda activate post-proc
@@ -252,37 +251,6 @@ do
 done
 
 
-
-for j in $(ls ${assemble}/nv*_${assembler}/assembly.fasta)
-do
-name=`echo $j|gawk -F "/" '{print $7}'|sed s/_Flye//`
-
-echo $name
-#Set input and parameters
-round=3
-read=${trimmed}/${name}.trimmed.fastq
-read_type=ont #{clr,hifi,ont}
-mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
-input=${j}
-
-    for ((i=1; i<=${round};i++)); do
-        minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
-        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
-        samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
-        ls ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam > ${polishing}/lgs.sort.bam.fofn;
-        python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
-        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${assembler}.nextpolish.fasta;
-        # Finally polished genome file: ${name}.nextpolish.fasta
-        if ((i!=${round}));then
-            mv ${polishing}/${name}.nextpolish.fasta ${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
-            input=${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
-        fi;
-    done;
-
-rm ${polishing}/${name}.${assembler}.nextpolishtmp.fasta
-rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
-done
 
 ##For NextPolish
 ##According to the author, making the loops manually is faster than using the package.
@@ -345,175 +313,13 @@ done
 #java -XX:+AggressiveHeap -jar means letting the program use as much memory as needed.
 
 
-##NCBI-Nanopore samples
-conda activate post-proc #this contain Racon, Ragtag
-##Polishing with racon
-assembler=Flye
-
-for k in $(ls ${assemble}/*_ONT_${assembler}/assembly.fasta)
-do
-name=$(echo $k | gawk -F "/" '{print $7}' | sed "s/_${assembler}//g")
-read=${trimmed}/${name}.trimmed.fastq
-
-round=3
-input=${k}
-
-    for ((i=1; i<=${round};i++))
-    do
-    echo "round $i"
-    minimap2 -x map-ont -t ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.paf ${input} ${read}
-    #samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-    #samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-    racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${assembler}.paf ${input} >${polishing}/${name}.${assembler}.racon.fasta
-        if ((i!=${round}));then
-        mv ${polishing}/${name}.${assembler}.racon.fasta ${polishing}/${name}.${assembler}.racontmp.fasta;
-        input=${polishing}/${name}.${assembler}.racontmp.fasta;
-        fi;
-    done
-rm ${aligned_bam}/${name}.trimmed-${assembler}.paf
-rm ${polishing}/${name}.${assembler}.racontmp.fasta
-done
-conda deactivate
-
-##Then, polishing with Nextpolish
-for j in $(ls ${polishing}/*_ONT.${assembler}.racon.fasta)
-do
-name=$(echo $j|gawk -F "/" '{print $7}'|sed "s/.${assembler}.racon.fasta//")
-echo $name
-#Set input and parameters
-round=3
-read=${trimmed}/${name}.trimmed.fastq
-read_type=ont #{clr,hifi,ont}
-mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
-input=${j}
-
-    for ((i=1; i<=${round};i++)); do
-        minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
-        samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
-        samtools index ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam;
-        ls ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam > ${polishing}/lgs.sort.bam.fofn;
-        python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
-        -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${assembler}.nextpolish.fasta;
-        # Finally polished genome file: ${name}.nextpolish.fasta
-        if ((i!=${round}));then
-            mv ${polishing}/${name}.${assembler}.nextpolish.fasta ${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
-            input=${polishing}/${name}.${assembler}.nextpolishtmp.fasta;
-        fi;
-    done;
-rm ${polishing}/${name}.${assembler}.nextpolishtmp.fasta
-rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam
-rm ${aligned_bam}/${name}.trimmed-${assembler}.sort.bam.bai
-done
-
-
-##polishing, without illumina reads or FAST5. --> Medaka or Racon.
-##Medaka is designed to be used on Flye assembly directly!!
-##Medaka was installed with "pip" because Anaconda kept failing.
-conda activate post-proc
-
-
-for i in $(ls ${assemble}/SRR*_ONT_Flye/assembly.fasta)
-do
-echo $i 
-name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
-echo $name
-
-medaka_consensus -i ${raw}/PRJNA929424/${name}_ONT.fastq.gz -d ${i} -o ${polishing}/${name}-medaka-1 \
--t ${nT} -m r941_min_hac_g507
-done
-
-
-for i in /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta
-do
-echo $i 
-name=$(echo $i | gawk -F "\/" '{print $7}' 2>>/dev/null| sed s/_ONT_Flye//g)
-echo $name
-
-medaka_consensus -i /home/jenyuw/SV-project/raw/PRJNA929424/SRR23269563_ONT.fastq.gz \
--d /home/jenyuw/SV-project/result/assemble/SRR23269563_ONT_Flye/assembly.fasta \
--o ${polishing}/SRR23269563-medaka-1/ \
--t ${nT} -m r941_min_hac_g507
-done
-
-
-minimap2 -t ${nT} -B 5 -a -x map-ont \
-$i ${trimmed}/${name}_ONT.trimmed.fastq |\
-samtools view -b -h -@ ${nT} -o - |\
-samtools sort -@ ${nT} -o ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
-samtools index -@ ${nT} ${aligned_bam}/${name}_ONT.trimmed_assembly.sort.bam
-
-medaka_consensus -i ${BASECALLS} -d ${DRAFT} -o ${OUTDIR} -t ${nT}\
--m r941_min_hac_g507
-
-## purge_dups
-purge_dups="/home/jenyuw/SV-project/result/purge_dups"
-pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
-
-ls ${trimmed}/nv107.trimmed.fastq >${purge_dups}/read.fofn
-
-python3 ${pd_scripts}/pd_config.py \
-    -l ${purge_dups}/nv107.canu.nextpolish \
-    -n ${purge_dups}/TESTconfig.json \
-    ${polishing}/nv107.canu.nextpolish.fasta \
-    ${purge_dups}/read.fofn
-nT="2"
-echo -e "
-{
-  \"cc\": {
-    \"fofn\": \"${purge_dups}/read.fofn\",
-    \"isdip\": 1,
-    \"core\": ${nT},
-    \"mem\": 60000,
-    \"queue\": \"normal\",
-    \"mnmp_opt\": \"-t ${nT} -x map-ont \",
-    \"bwa_opt\": \"\",
-    \"ispb\": 1,
-    \"skip\": 0
-  },
-  \"sa\": {
-    \"core\": ${nT},
-    \"mem\": 40000,
-    \"queue\": \"normal\"
-  },
-  \"busco\": {
-    \"core\": ${nT},
-    \"mem\": 60000,
-    \"queue\": \"long\",
-    \"skip\": 0,
-    \"lineage\": \"diptera\",
-    \"prefix\": \"assembly_purged\",
-    \"tmpdir\": \"busco_tmp\"
-  },
-  \"pd\": {
-    \"mem\": 60000,
-    \"queue\": \"normal\"
-  },
-  \"gs\": {
-    \"mem\": 60000,
-    \"oe\": 1
-  },
-  \"kcp\": {
-    \"core\": ${nT},
-    \"mem\": 60000,
-    \"fofn\": \"\",
-    \"prefix\": \"assembly_purged_kcm\",
-    \"tmpdir\": \"kcp_tmp\",
-    \"skip\": 1
-  },
-  \"ref\": "\"/home/jenyuw/SV-project/result/purge_dups/nv107_Flye/assembly.fasta\"",
-  \"out_dir\": "\"${purge_dups}/nv107_Flye\""
-}" >${purge_dups}/TESTconfig.json
-
-python3 ${pd_scripts}/run_purge_dups.py \
-    --platform bash --wait 1 --retries 3 \
-    ${purge_dups}/TESTconfig.json /home/jenyuw/Software/purge_dups/bin SPID
 
 ## purge_dups as a pipeline
 purge_dups="/home/jenyuw/SV-project/result/purge_dups"
 pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
 pd_bin="/home/jenyuw/Software/purge_dups/bin"
 
-
+: << 'SKIP'
 minimap2 -t 20 -x map-ont ${polishing}/nv107.canu.nextpolish.fasta ${trimmed}/nv107.trimmed.fastq | pigz -p 6 -c - > ${purge_dups}/nv107.c.np.paf.gz
 ${pd_bin}/pbcstat ${purge_dups}/nv107.c.np.paf.gz
 ${pd_bin}/calcuts PB.stat > cutoffs 2>calcults.log
@@ -522,7 +328,7 @@ minimap2 -t 20 -x asm5 -DP ${purge_dups}/nv107.c.np.split ${purge_dups}/nv107.c.
 pigz -p 10 -c - > ${purge_dups}/nv107.c.np.split.self.paf.gz
 ${pd_bin}/purge_dups -2 -T ${purge_dups}/cutoffs -c ${purge_dups}/PB.base.cov ${purge_dups}/nv107.c.np.split.self.paf.gz > ${purge_dups}/dups.bed 2> ${purge_dups}/purge_dups.log
 ${pd_bin}/get_seqs -e ${purge_dups}/dups.bed  ${polishing}/nv107.canu.nextpolish.fasta
-
+SKIP
 
 
 function purge {
@@ -530,21 +336,24 @@ function purge {
   # $2 is mapping option
   # $3 is primary assembly
   # $4 is the trimmed reads
-  prefix=`basename $3 | gawk -F "." '{print $1.$2.$3}'`
+  prefix=`basename $3 | gawk -F "." '{print $1 "." $2 "." $3}'`
   echo "the prefix is ${prefix}"
-  minimap2 -t $1 -x $2 $3 $4 | pigz -p 10 -c - > ${purge_dups}/${prefix}.paf.gz
-  ${pd_bin}/pbcstat ${purge_dups}/${prefix}.paf.gz
-  ${pd_bin}/calcuts ${purge_dups}/PB.stat > ${purge_dups}/cutoffs 2>${purge_dups}/calcults.log
-  ${pd_bin}/split_fa $3 > ${purge_dups}/${prefix}.split
-  minimap2 -t $1 -x asm5 -DP ${purge_dups}/${prefix}.split ${purge_dups}/${prefix}.split pigz -p 10 -c - > ${purge_dups}/${prefix}.split.self.paf.gz
-  ${pd_bin}/purge_dups -2 -T ${purge_dups}/cutoffs -c ${purge_dups}/PB.base.cov ${purge_dups}/${prefix}.split.self.paf.gz > ${purge_dups}/dups.bed 2> ${purge_dups}/purge_dups.log
   mkdir ${purge_dups}/${prefix}
   cd ${purge_dups}/${prefix}
-  ${pd_bin}/get_seqs -e ${purge_dups}/dups.bed $3
+
+  minimap2 -t $1 -x $2 $3 $4 | pigz -p 10 -c - > ${prefix}.paf.gz
+  ${pd_bin}/pbcstat ${prefix}.paf.gz
+  ${pd_bin}/calcuts PB.stat > cutoffs 2>calcults.log
+  ${pd_bin}/split_fa $3 > ${prefix}.split
+  minimap2 -t $1 -x asm5 -DP ${prefix}.split ${prefix}.split |pigz -p 10 -c - > ${prefix}.split.self.paf.gz
+  ${pd_bin}/purge_dups -2 -T cutoffs -c PB.base.cov ${prefix}.split.self.paf.gz > dups.bed 2> purge_dups.log
+
+  ${pd_bin}/get_seqs -e dups.bed $3
 }
 
-purge 20 map-ont ${polishing}/nv109.canu.nextpolish.fasta ${trimmed}/nv107.trimmed.fastq
-ragtag.py patch -t 20 -o ${purge_dups}/${prefix}/merged ${polishing}/nv107.Flye.nextpolish.fasta ${purge_dups}/${prefix}/hap.fa
+purge 20 map-ont ${polishing}/nv109.canu.nextpolish.fasta ${trimmed}/nv109.trimmed.fastq
+
+#ragtag.py patch -t 20 -o ${purge_dups}/${prefix}/merged ${polishing}/nv107.Flye.nextpolish.fasta ${purge_dups}/${prefix}/hap.fa
 
 
 ##Patching
