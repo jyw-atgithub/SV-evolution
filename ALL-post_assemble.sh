@@ -160,47 +160,51 @@ do
 done
 
 
-##nv samples
+##nv sample
 conda activate post-proc
-assembler="nextdenovo"
-
+assembler="Flye canu"
+prefix="nv*"
 for i in `echo $assembler`
 do
   if [[ $i == "Flye" ]]
   then
   echo "racon $i now"
-  polish_Ra "${assemble}/nv*_${i}/assembly.fasta" "ont" "3"
+  polish_Ra "${assemble}/${prefix}_${i}/assembly.fasta" "ont" "3"
   elif [[ $i == "canu" ]]
   then
   echo "racon $i now"
-  polish_Ra "${assemble}/nv*_${i}/*.contigs.fasta" "ont" "3"
+  polish_Ra "${assemble}/${prefix}_${i}/*.contigs.fasta" "ont" "3"
   elif [[ $i == "nextdenovo" ]]
   then
   echo "racon $i now"
-  polish_Ra "${assemble}/nv*_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
+  polish_Ra "${assemble}/${prefix}_${i}/03.ctg_graph/nd.asm.fasta" "ont" "3"
   else
   echo "NO such assembler was used"
   fi
 done
 conda deactivate
 
-assembler="nextdenovo"
-for i in $(echo $assembler)ref_genome="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
-raw="/home/jenyuw/SV-project/raw"
-qc_report="/home/jenyuw/SV-project/result/qc_report"
-trimmed="/home/jenyuw/SV-project/result/trimmed"
-assemble="/home/jenyuw/SV-project/result/assemble"
-aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
-polishing="/home/jenyuw/SV-project/result/polishing"
-canu_proc="/home/jenyuw/SV-project/result/canu_processing"
-patched="/home/jenyuw/SV-project/result/patched_contigs"
-scaffold="/home/jenyuw/SV-project/result/scaffold"
-busco_out="/home/jenyuw/SV-project/result/busco_out"
-  polish_Np "${polishing}/nv*.${i}.racon.fasta" "ont" "3"
+assembler="Flye canu"
+for i in $(echo $assembler)
+do
+  if [[ $i == "Flye" ]]
+  then
+  echo "Nextpolish $i now"
+  polish_Np "${polishing}/${prefix}.${i}.racon.fasta" "ont" "3"
+  elif [[ $i == "canu" ]]
+  then
+  echo "Nestpolish $i now"
+  polish_Np "${polishing}/${prefix}.${i}.racon.fasta" "ont" "3"
+  elif [[ $i == "nextdenovo" ]]
+  then
+  echo "Nextpolish $i now"
+  polish_Np "${polishing}/${prefix}.${i}.racon.fasta" "ont" "3"
   else
   echo "NO such assembler was used"
   fi
 done
+
+
 
 ##DSPR samples
 
@@ -461,7 +465,7 @@ echo -e "
     \"core\": ${nT},
     \"mem\": 60000,
     \"queue\": \"normal\",
-    \"mnmp_opt\": \"\",
+    \"mnmp_opt\": \"-t ${nT} -x map-ont \",
     \"bwa_opt\": \"\",
     \"ispb\": 1,
     \"skip\": 0
@@ -476,7 +480,7 @@ echo -e "
     \"mem\": 60000,
     \"queue\": \"long\",
     \"skip\": 0,
-    \"lineage\": \"diptera_odb10\",
+    \"lineage\": \"diptera\",
     \"prefix\": \"assembly_purged\",
     \"tmpdir\": \"busco_tmp\"
   },
@@ -510,16 +514,37 @@ pd_scripts="/home/jenyuw/Software/purge_dups/scripts"
 pd_bin="/home/jenyuw/Software/purge_dups/bin"
 
 
-minimap2 -t 6 -x map-pb ${polishing}/nv107.canu.nextpolish.fasta ${trimmed}/nv107.trimmed.fastq | pigz -p 6 -c - > ${purge_dups}/nv107.c.np.paf.gz
-
+minimap2 -t 20 -x map-ont ${polishing}/nv107.canu.nextpolish.fasta ${trimmed}/nv107.trimmed.fastq | pigz -p 6 -c - > ${purge_dups}/nv107.c.np.paf.gz
 ${pd_bin}/pbcstat ${purge_dups}/nv107.c.np.paf.gz
 ${pd_bin}/calcuts PB.stat > cutoffs 2>calcults.log
+${pd_bin}/split_fa ${polishing}/nv107.canu.nextpolish.fasta > ${purge_dups}/nv107.c.np.split
+minimap2 -t 20 -x asm5 -DP ${purge_dups}/nv107.c.np.split ${purge_dups}/nv107.c.np.split |\
+pigz -p 10 -c - > ${purge_dups}/nv107.c.np.split.self.paf.gz
+${pd_bin}/purge_dups -2 -T ${purge_dups}/cutoffs -c ${purge_dups}/PB.base.cov ${purge_dups}/nv107.c.np.split.self.paf.gz > ${purge_dups}/dups.bed 2> ${purge_dups}/purge_dups.log
+${pd_bin}/get_seqs -e ${purge_dups}/dups.bed  ${polishing}/nv107.canu.nextpolish.fasta
 
-bin/split_fa ${polishing}/nv107.canu.nextpolish.fasta > ${purge_dups}/nv107.c.np.split
-minimap2 -x asm5 -DP ${purge_dups}/nv107.c.np.split ${purge_dups}/nv107.c.np.split | pigz -p 6 -c - > nv107.c.np.split.self.paf.gz
 
 
+function purge {
+  # $1 is number of threads
+  # $2 is mapping option
+  # $3 is primary assembly
+  # $4 is the trimmed reads
+  prefix=`basename $3 | gawk -F "." '{print $1.$2.$3}'`
+  echo "the prefix is ${prefix}"
+  minimap2 -t $1 -x $2 $3 $4 | pigz -p 10 -c - > ${purge_dups}/${prefix}.paf.gz
+  ${pd_bin}/pbcstat ${purge_dups}/${prefix}.paf.gz
+  ${pd_bin}/calcuts ${purge_dups}/PB.stat > ${purge_dups}/cutoffs 2>${purge_dups}/calcults.log
+  ${pd_bin}/split_fa $3 > ${purge_dups}/${prefix}.split
+  minimap2 -t $1 -x asm5 -DP ${purge_dups}/${prefix}.split ${purge_dups}/${prefix}.split pigz -p 10 -c - > ${purge_dups}/${prefix}.split.self.paf.gz
+  ${pd_bin}/purge_dups -2 -T ${purge_dups}/cutoffs -c ${purge_dups}/PB.base.cov ${purge_dups}/${prefix}.split.self.paf.gz > ${purge_dups}/dups.bed 2> ${purge_dups}/purge_dups.log
+  mkdir ${purge_dups}/${prefix}
+  cd ${purge_dups}/${prefix}
+  ${pd_bin}/get_seqs -e ${purge_dups}/dups.bed $3
+}
 
+purge 20 map-ont ${polishing}/nv109.canu.nextpolish.fasta ${trimmed}/nv107.trimmed.fastq
+ragtag.py patch -t 20 -o ${purge_dups}/${prefix}/merged ${polishing}/nv107.Flye.nextpolish.fasta ${purge_dups}/${prefix}/hap.fa
 
 
 ##Patching
