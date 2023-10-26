@@ -438,6 +438,27 @@ do
     done
 done
 
+## Purged original assembly ## Purged++Polished assembly
+
+for i in $(ls ${busco_out}/*.purged/short_summary.specific.diptera_odb10.*.txt 2>/dev/null)
+do
+name=$(echo $i| gawk -F "/" ' {print $7}')
+#echo $name
+strain=$(echo $i| gawk -F "/" ' {print $7}'| gawk -F "." '{print $1}' | gawk -F "_" '{print $1}')
+#echo $strain 
+ass=$(echo $i| gawk -F "/" ' {print $7}' | sed "s/.purged//g;s/.polished//g" |tr "." "_"| gawk -F "_" ' {print $NF}' )
+#echo $ass
+
+  if [[ "$name" =~ "*.polished" ]]
+  then
+  polisher="polished-purged"
+  else
+  polisher="ori-purged"
+  fi
+
+grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" |tr -d "[" |tr -d "%"&& echo -e "\t${strain}\t${ass}\t${polisher}\t"busco""
+done
+
 
 #awk '{print substr(s, i, n)}' substr function accepts three arguments
 #s: input string

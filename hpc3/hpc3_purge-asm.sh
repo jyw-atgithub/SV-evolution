@@ -27,13 +27,13 @@ source ~/.bashrc
 if [[ $SLURM_ARRAY_TASK_ID == 1 ]]
 then
 echo "Yes, ARRAY_TASK_ID=1"
-ls ${polishing}/*.nextpolish.fasta| gawk -F "/" '{print $7}' | sed "s/.nextpolish.fasta//g" >${purge_dups}/namelist.txt
+ls ${trimmed}/*.trimmed.fastq.gz| gawk -F "/" '{print $7}' | sed "s/.trimmed.fastq.gz//g ; s/.rn//g" >${purge_dups}/namelist.txt
 else
 echo "No need to list the file again"
 fi
 
-n=`cat ${purge_dups}/namelist.txt|wc -l `
-echo "there are ${n} names"
+n=`cat ${purge_dups}/namelist.txt |wc -l `
+echo "there are ${n}" "names"
 name=`head -n $SLURM_ARRAY_TASK_ID ${purge_dups}/namelist.txt |tail -n 1`
 echo "name is ${name}"
 
@@ -46,8 +46,8 @@ function purge {
   #prefix=`basename $3 | gawk -F "." '{print $1 "." $2 "." $3}'`
   prefix=$5
   echo "the prefix is ${prefix}"
-  mkdir ${purge_dups}/${prefix}-polished
-  cd ${purge_dups}/${prefix}-polished
+  mkdir ${purge_dups}/${prefix}.purged
+  cd ${purge_dups}/${prefix}.purged
 
   minimap2 -t $1 -x $2 $3 $4 | pigz -p 10 -c - > ${prefix}.paf.gz
   ${pd_bin}/pbcstat ${prefix}.paf.gz
@@ -60,31 +60,67 @@ function purge {
 }
 
 
-STR="A1 A2 A3 A4 A5 A6 A7 AB8 B1 B2 B3 B4 B6 ORE"
-STR2="nv107 nv109 nv115"
-strain=`echo ${name} |gawk -F "." '{print $1}'`
-echo "strain is ${strain}"
-if grep -q ${strain} <<< "$STR"
-##for DSPR samples
+
+#### UGLY solution for poor nomenclature
+
+if (( $SLURM_ARRAY_TASK_ID < 18 ))
 then
+
+##for nv and DSPR samples
+assemblers="Flye canu nextdenovo"
+for i in `echo ${assemblers}`
+do
+  read_type=`echo $name |gawk -F "_" '{print $2}' `
+  echo "The read type is ${read_type}"
+  name=`echo $name |gawk -F "_" '{print $1}' `
+  echo "The new name is ${name}"
+
   mapping_option=(["CLR"]="map-pb" ["HIFI"]="asm20" ["ONT"]="map-ont")
-  read_type=CLR
+  if [[ $i == "Flye" ]]
+  then
   purge ${nT} ${mapping_option[$read_type]} \
-  ${polishing}/${name}.nextpolish.fasta ${trimmed}/${strain}_${read_type}.trimmed.fastq.gz ${name}
-elif grep -q ${strain} <<< "$STR2"
-##for nv samples
+  ${assemble}/${name}_${i}/assembly.fasta ${trimmed}/${name}_${read_type}.trimmed.fastq.gz ${name}_${read_type}_$i
+  elif [[ $i == "canu" ]]
+  then
+  purge ${nT} ${mapping_option[$read_type]} \
+  ${assemble}/${name}_${i}/${name}.contigs.fasta ${trimmed}/${name}_${read_type}.trimmed.fastq.gz ${name}_${read_type}_$i
+  elif [[ $i == "nextdenovo" ]]
+  then
+  purge ${nT} ${mapping_option[$read_type]} \
+  ${assemble}/${name}_${i}/03.ctg_graph/nd.asm.fasta ${trimmed}/${name}_${read_type}.trimmed.fastq.gz ${name}_${read_type}_$i
+  else
+  echo "NO such assembler ${i} was used"
+  fi
+echo "FOR nv and DSPR samples FINISHED"
+name=`head -n $SLURM_ARRAY_TASK_ID ${purge_dups}/namelist.txt |tail -n 1`
+done 
+
+elif (( $SLURM_ARRAY_TASK_ID > 17 ))
 then
-  mapping_option=(["CLR"]="map-pb" ["HIFI"]="asm20" ["ONT"]="map-ont")
-  read_type=ONT
-  purge ${nT} ${mapping_option[$read_type]} \
-  ${polishing}/${name}.nextpolish.fasta ${trimmed}/${strain}_${read_type}.trimmed.fastq.gz ${name}
-elif [[ ${name} =~ "SRR232"* ]]
 ##for SRR samples
-then
+assemblers="Flye canu nextdenovo"
+for i in `echo ${assemblers}`
+do
+  read_type=`echo $name |gawk -F "_" '{print $2}' `
+  echo "The read type is ${read_type}"
   mapping_option=(["CLR"]="map-pb" ["HIFI"]="asm20" ["ONT"]="map-ont")
-  read_type=ONT
+  if [[ $i == "Flye" ]]
+  then
   purge ${nT} ${mapping_option[$read_type]} \
-  ${polishing}/${name}.nextpolish.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}
-else
-echo "failed"
-fi
+  ${assemble}/${name}_${i}/assembly.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}_$i
+  elif [[ $i == "canu" ]]
+  then
+  purge ${nT} ${mapping_option[$read_type]} \
+  ${assemble}/${name}_${i}/${name}.contigs.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}_$i
+  elif [[ $i == "nextdenovo" ]]
+  then
+  purge ${nT} ${mapping_option[$read_type]} \
+  ${assemble}/${name}_${i}/03.ctg_graph/nd.asm.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}_$i
+  else
+  echo "NO such assembler ${i} was used"
+  fi
+echo "FOR SRR samples FINISHED"
+done 
+
+fi 
+
