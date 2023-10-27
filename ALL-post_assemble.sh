@@ -449,14 +449,14 @@ strain=$(echo $i| gawk -F "/" ' {print $7}'| gawk -F "." '{print $1}' | gawk -F 
 ass=$(echo $i| gawk -F "/" ' {print $7}' | sed "s/.purged//g;s/.polished//g" |tr "." "_"| gawk -F "_" ' {print $NF}' )
 #echo $ass
 
-  if [[ "$name" =~ "*.polished" ]]
+  if [[ "$name" == *".polished"* ]]
   then
   polisher="polished-purged"
+  grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" |tr -d "[" |tr -d "%"&& echo -e "\t${strain}\t${ass}\t${polisher}\t"busco""
   else
   polisher="ori-purged"
+  grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" |tr -d "[" |tr -d "%"&& echo -e "\t${strain}\t${ass}\t${polisher}\t"busco""
   fi
-
-grep "C:" $i|awk '{print substr($0, 4, 5)}'|tr -d "\n" |tr -d "[" |tr -d "%"&& echo -e "\t${strain}\t${ass}\t${polisher}\t"busco""
 done
 
 
