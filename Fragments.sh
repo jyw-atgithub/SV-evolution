@@ -107,3 +107,9 @@ bcftools query -f '%INFO/SVTYPE \n'  pav_nv107.vcf.gz|sort -h | uniq -c
  103812 INS 
      15 INV 
  916851 SNV 
+
+
+prefetch -pcv ${strain}
+
+fastq-dump --split-spot --stdout  /dfs7/jje/jenyuw/SV-project-temp/raw/${strain}/*.sra |\
+pigz -p 15 -v  >/dfs7/jje/jenyuw/SV-project-temp/raw/${strain}_${tech}.fastq.gz
