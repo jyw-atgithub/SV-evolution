@@ -88,3 +88,22 @@ maxThreads=60 \
 done
 
 
+grep -v ^#  nv107syri.vcf | gawk '{print $3}' | cut -c 1-3 |sort |uniq -c
+     14 CPG
+     23 CPL
+  76584 DEL
+    151 DUP
+   4509 HDR
+  71926 INS
+    352 INV
+    231 NOT
+ 708407 SNP
+   4749 SYN
+      5 TDM
+     93 TRA
+
+bcftools query -f '%INFO/SVTYPE \n'  pav_nv107.vcf.gz|sort -h | uniq -c
+ 107641 DEL 
+ 103812 INS 
+     15 INV 
+ 916851 SNV 
