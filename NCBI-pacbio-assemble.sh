@@ -98,3 +98,21 @@ nextgraph_options = -a 1
 ls $i > ${assemble}/input.fofn
 nextDenovo ${assemble}/run.cfg
 done
+
+
+
+
+##For PACBIO
+for i in $(ls ${trimmed}/ORE.rn.trimmed.fastq.gz)
+do
+name=$(basename ${i}|sed s/".rn.trimmed.fastq.gz"//g)
+canu -p ${name} -d ${assemble}/${name}_canu \
+genomeSize=135m \
+maxInputCoverage=90 \
+minReadLength=300 \
+minOverlapLength=300 \
+maxThreads=60 \
+correctedErrorRate=0.085 corMhapSensitivity=normal \
+stopOnLowCoverage=2 minInputCoverage=2.5 \
+-raw -pacbio ${i}
+done

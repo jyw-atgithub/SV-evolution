@@ -83,3 +83,17 @@ samtools merge -o ${polarizing}/all.dsim.part-ins.bam ${polarizing}/*.dsim.part-
 #parallel -j 10 echo {#}{} ::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam)
 #parallel -j 10 echo {#}{} ::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam |basename |sed s/.trimmed-ref.sort.bam//g)
 #::: $(ls ${aligned_bam}/*.trimmed-ref.sort.bam) 
+
+
+dmel_ref="/home/jenyuw/SV-project/reference_genome/dmel-all-chromosome-r6.49.fasta"
+dsim_ref="/home/jenyuw/SV-project/reference_genome/dsim-all-chromosome-r2.02.fasta"
+svim-asm haploid --sample sim_to_mel --min_sv_size 50 \
+/home/jenyuw/SV-project/result/polarizing /home/jenyuw/SV-project/result/polarizing/corrected.bam ${dmel_ref}
+
+lra global -CONTIG ${dmel_ref}
+lra align -CONTIG ${dmel_ref} ${dsim_ref} -t 16 -p s > lra-dsim-dmel.sam
+
+samtools view -@ 8 -b lra-dsim-dmel.sam -o -|samtools sort -@ 8 - > lra-dsim-dmel.bam
+
+svim-asm haploid --sample "sim_to_mel" --min_sv_size 50 \
+/home/jenyuw/SV-project/result/polarizing/lra /home/jenyuw/SV-project/result/polarizing/lra-dsim-dmel.bam ${dmel_ref}
