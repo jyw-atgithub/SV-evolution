@@ -48,6 +48,8 @@ cuteSV --threads ${nT} --genotype --sample ${name}_cute \
 -L '-1' \
 --merge_del_threshold 270 --merge_ins_threshold 270 \
 --max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
- "${file}" "${ref_genome}" "${name}_cutesv.vcf" "${SVs}"
+ "${file}" "${ref_genome}" "${name}.cutesv.vcf" "${SVs}"
 
 module unload python/3.10.2
+
+echo "This is the end"

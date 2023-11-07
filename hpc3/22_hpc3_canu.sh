@@ -36,7 +36,7 @@ echo read type is $read_type
 
 ##For NANOPORE flip-flop R9.4 or R10.3
 #If you have over 30x coverage add the options: 'corMhapOptions=--threshold 0.8 --ordered-sketch-size 1000 --ordered-kmer-size 14 correctedErrorRate=0.105.
-
+## useGrid=false, so canu won't detect other machine and charge my personal account
 if [[ ${read_type} == "ONT" ]]
 then 
 canu -p ${name} -d ${assemble}/${name}_canu \
@@ -46,6 +46,7 @@ minReadLength=500 \
 maxThreads=${nT} \
 correctedErrorRate=0.105 \
 'corMhapOptions=--threshold 0.8 --ordered-sketch-size 1000 --ordered-kmer-size 14' \
+useGrid=false \
 -nanopore-raw ${file}
 
 elif [[ ${read_type} == "CLR" ]]
@@ -59,6 +60,7 @@ minOverlapLength=500 \
 maxThreads=${nT} \
 correctedErrorRate=0.035 utgOvlErrorRate=0.065 trimReadsCoverage=2 trimReadsOverlap=500 \
 stopOnLowCoverage=2 minInputCoverage=2.5 \
+useGrid=false \
 -raw -pacbio ${file}
 
 #correctedErrorRate=0.085 corMhapSensitivity=normal

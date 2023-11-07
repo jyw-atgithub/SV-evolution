@@ -14,7 +14,7 @@ trimmed="/dfs7/jje/jenyuw/SV-project-temp/result/trimmed"
 assemble="/dfs7/jje/jenyuw/SV-project-temp/result/assemble"
 aligned_bam="/dfs7/jje/jenyuw/SV-project-temp/result/aligned_bam"
 polishing="/dfs7/jje/jenyuw/SV-project-temp/result/polishing"
-
+nplib="/pub/jenyuw/Software/NextPolish/lib"
 source ~/.bashrc
 
 nT=$SLURM_CPUS_PER_TASK
@@ -31,9 +31,11 @@ echo "polish_Np starts"
 name=`echo $j|gawk -F "/" '{print $8}'|gawk -F "." '{print $1}'`
 echo "name is $name"
 round=$3
-read=${trimmed}/${name}.trimmed.fastq
+read=${trimmed}/${name}.trimmed.fastq.gz
 read_type=$2 
-mapping_option=(["CLR"]="map-pb" ["hifi"]="asm20" ["ONT"]="map-ont")
+echo "the second argument is $2, is read_type $read_type"
+declare -A mapping_option=(["CLR"]='map-pb' ["hifi"]='asm20' ["ONT"]='map-ont')
+echo "The mapping option is ${mapping_option[$read_type]}"
     if [[ $2 != "CLR" && $2 != "hifi" && $2 != "ONT" ]]
     then
     echo "The second argument can only be one of \"CLR, hifi, ONT\""
@@ -43,11 +45,11 @@ input=${j}
     do
     echo "round $count"
     echo "input is" $input
-    minimap2 -ax ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
+    minimap2 -a -x ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
     samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.sort.bam
     samtools index ${aligned_bam}/${name}.trimmed-${i}.sort.bam
     ls ${aligned_bam}/${name}.trimmed-${i}.sort.bam > ${polishing}/lgs.sort.bam.fofn
-    python3 /home/jenyuw/Software/NextPolish/lib/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
+    python3 ${nplib}/nextpolish2.py -g ${input} -l ${polishing}/lgs.sort.bam.fofn \
     -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${i}.nextpolish.fasta
     if ((${count}!=${round}));then
         mv ${polishing}/${name}.${i}.nextpolish.fasta ${polishing}/${name}.${i}.nextpolishtmp.fasta;
