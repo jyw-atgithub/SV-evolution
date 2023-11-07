@@ -1,20 +1,25 @@
 #!/bin/bash
 
-#SBATCH --job-name=polish    ## Name of the job.
+#SBATCH --job-name=np    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
-#SBATCH -p standard        ## partition/queue name
+#SBATCH -p highmem        ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=36   ## number of cores the job needs
-#SBATCH --mem-per-cpu=6G     # requesting memory per CPU
+#SBATCH --cpus-per-task=24   ## number of cores the job needs
+#SBATCH --mem-per-cpu=10G     # requesting memory per CPU
 
 # racon --> nextpolisher +/- POLCA
-
-trimmed="/home/jenyuw/SV-project/result/trimmed"
-assemble="/home/jenyuw/SV-project/result/assemble"
-aligned_bam="/home/jenyuw/SV-project/result/aligned_bam"
-polishing="/home/jenyuw/SV-project/result/polishing"
-
 ### Racon*3  --> NextPolish*3
+
+trimmed="/dfs7/jje/jenyuw/SV-project-temp/result/trimmed"
+assemble="/dfs7/jje/jenyuw/SV-project-temp/result/assemble"
+aligned_bam="/dfs7/jje/jenyuw/SV-project-temp/result/aligned_bam"
+polishing="/dfs7/jje/jenyuw/SV-project-temp/result/polishing"
+
+source ~/.bashrc
+
+nT=$SLURM_CPUS_PER_TASK
+echo "cpu number is $SLURM_CPUS_PER_TASK"
+
 
 
 function polish_Np {
@@ -23,15 +28,15 @@ function polish_Np {
 for j in $(ls $1 2> /dev/null)
 do
 echo "polish_Np starts"
-name=`echo $j|gawk -F "/" '{print $7}'|gawk -F "." '{print $1}'`
+name=`echo $j|gawk -F "/" '{print $8}'|gawk -F "." '{print $1}'`
 echo "name is $name"
 round=$3
 read=${trimmed}/${name}.trimmed.fastq
-read_type=$2 #{clr,hifi,ont}
-mapping_option=(["clr"]="map-pb" ["hifi"]="asm20" ["ont"]="map-ont")
-    if [[ $2 != "clr" && $2 != "hifi" && $2 != "ont" ]]
+read_type=$2 
+mapping_option=(["CLR"]="map-pb" ["hifi"]="asm20" ["ONT"]="map-ont")
+    if [[ $2 != "CLR" && $2 != "hifi" && $2 != "ONT" ]]
     then
-    echo "The second argument can only be one of \"clr, hifi, ont\""
+    echo "The second argument can only be one of \"CLR, hifi, ONT\""
     fi
 input=${j}
     for ((count=1; count<=${round};count++))
@@ -55,5 +60,34 @@ rm ${aligned_bam}/${name}.trimmed-${i}.sort.bam.bai
 done
 }
 
+file=`head -n $SLURM_ARRAY_TASK_ID ${trimmed}/namelist.txt |tail -n 1`
+name=$(basename ${file}|sed s/".trimmed.fastq.gz"//g)
+read_type=`echo ${name} | gawk -F "_" '{print $2}'`
+echo "the file is ${file}"
+echo "the read type is ${read_type}"
 
 module load python/3.10.2
+module load samtools/1.15.1
+
+assembler="Flye"
+for i in $(echo $assembler)
+do
+    if [[ $i == "Flye" ]]
+    then
+    echo "Nextpolish $i now"
+    polish_Np "${polishing}/${name}.${i}.racon.fasta" "${read_type}" "3"
+    elif [[ $i == "canu" ]]
+    then
+    echo "Nestpolish $i now"
+    polish_Np "${polishing}/${name}.${i}.racon.fasta" "${read_type}" "3"
+    elif [[ $i == "nextdenovo" ]]
+    then
+    echo "Nextpolish $i now"
+    polish_Np "${polishing}/${name}.${i}.racon.fasta" "${read_type}" "3"
+    else
+    echo "NO such assembler was used"
+    fi
+done
+
+module unload python/3.10.2
+module unload samtools/1.15.1
