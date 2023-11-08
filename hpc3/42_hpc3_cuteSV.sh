@@ -42,13 +42,39 @@ module load python/3.10.2
 ##This method failed.
 
 cd ${SVs} # for unknown reason, cuteSV does save the file at our desired directory
-cuteSV --threads ${nT} --genotype --sample ${name}_cute \
---min_support 10 \
---min_size 50 --min_mapq 20 --min_read_len 500 \
--L '-1' \
---merge_del_threshold 270 --merge_ins_threshold 270 \
---max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
- "${file}" "${ref_genome}" "${name}.cutesv.vcf" "${SVs}"
+
+if [[ $read_type == "CLR" ]]
+then
+    cuteSV --threads ${nT} --genotype --sample ${name}_cute \
+    --min_support 10 \
+    --min_size 50 --min_mapq 20 --min_read_len 500 \
+    -L '-1' \
+    --merge_del_threshold 270 --merge_ins_threshold 270 \
+    --max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 200 --diff_ratio_merging_DEL 0.5 \
+    "${file}" "${ref_genome}" "${name}.cutesv.vcf" "${SVs}"
+elif [[ $read_type == "ONT" ]]
+then
+    cuteSV --threads ${nT} --genotype --sample ${name}_cute \
+    --min_support 10 \
+    --min_size 50 --min_mapq 20 --min_read_len 500 \
+    -L '-1' \
+    --merge_del_threshold 270 --merge_ins_threshold 270 \
+    --max_cluster_bias_INS 100 --diff_ratio_merging_INS 0.3 --max_cluster_bias_DEL 100 --diff_ratio_merging_DEL 0.3 \
+    "${file}" "${ref_genome}" "${name}.cutesv.vcf" "${SVs}"
+elif [[ $read_type == "hifi" ]]
+then
+    cuteSV --threads ${nT} --genotype --sample ${name}_cute \
+    --min_support 10 \
+    --min_size 50 --min_mapq 20 --min_read_len 500 \
+    -L '-1' \
+    --merge_del_threshold 270 --merge_ins_threshold 270 \
+	--max_cluster_bias_INS 1000 --diff_ratio_merging_INS 0.9 --max_cluster_bias_DEL 1000 --diff_ratio_merging_DEL 0.5 \
+    "${file}" "${ref_genome}" "${name}.cutesv.vcf" "${SVs}"
+else
+echo "The read type is not recognized"
+fi
+
+
 
 module unload python/3.10.2
 
