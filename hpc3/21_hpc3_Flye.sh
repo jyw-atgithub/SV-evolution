@@ -26,10 +26,13 @@ file=`head -n $SLURM_ARRAY_TASK_ID ${trimmed}/namelist.txt |tail -n 1`
 name=$(basename ${file}|sed s/".trimmed.fastq.gz"//g)
 read_type=`echo ${name} | gawk -F "_" '{print $2}'`
 
-preset_option=(["CLR"]="--pacbio-raw" ["ONT"]="--nano-raw")
 
+
+declare -A preset_option=(['CLR']='--pacbio-raw' ['ONT']='--nano-raw')
+#echo "The read type is ${read_type}"
+#echo "preset_option is ${preset_option[$read_type]}"
+#echo "--threads $nT --genome-size 135m ${preset_option[$read_type]} ${file} --out-dir ${assemble}/${name}_flye"
 conda activate assemble
-
-flye --threads $nT --genome-size 135m ${preset_option[read_type]} ${file} --out-dir ${assemble}/${name}_Flye
-
+#--pacbio-raw --pacbio-corr --pacbio-hifi --nano-raw --nano-corr --nano-hq --subassemblies is require
+flye --threads $nT --genome-size 135m ${preset_option[$read_type]} ${file} --out-dir ${assemble}/${name}_flye
 conda deactivate
