@@ -101,3 +101,16 @@ echo -e "
 python3 ${pd_scripts}/run_purge_dups.py \
     --platform bash --wait 1 --retries 3 \
     ${purge_dups}/TESTconfig.json /home/jenyuw/Software/purge_dups/bin SPID
+
+
+
+module load perl/5.34.1
+cd ${con_SVs}
+
+perl /pub/jenyuw/Software/combiSV/combiSV2.2.pl \
+-sniffles ${SVs}/${name}.sniffles.filtered.vcf \
+-cutesv ${SVs}/${name}.cutesv.filtered.vcf \
+-svim ${SVs}/${name}.SVIM.filtered.vcf \
+-c 3 -o ${name}
+
+rm ${con_SVs}/*_${name}.vcf
