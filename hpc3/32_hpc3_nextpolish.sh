@@ -69,7 +69,6 @@ echo "the file is ${file}"
 echo "the read type is ${read_type}"
 
 module load python/3.10.2
-module load samtools/1.15.1
 
 assembler="Flye"
 for i in $(echo $assembler)
@@ -92,4 +91,3 @@ do
 done
 
 module unload python/3.10.2
-module unload samtools/1.15.1

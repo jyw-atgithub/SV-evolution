@@ -17,7 +17,7 @@ name=$(basename ${file}|sed s/".trimmed-ref.sort.bam"//g)
 
 #We are using bcftools v18 and samtools v18!! 
 
-for i in `ls ${SVs}/${name}.{cutesv,sniffles,SVIM}.vcf 2>/dev/null`
+for i in `ls ${SVs}/${name}.{cutesv,sniffles,SVIM}.vcf 2>>${SVs}/faillist.txt`
 do
 prog=`basename ${i} | gawk -F "." '{print $2}' `
 bgzip -f --keep -@ ${nT} ${i}

@@ -2,10 +2,10 @@
 
 #SBATCH --job-name=ndenovo    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
-#SBATCH -p standard        ## partition/queue name
+#SBATCH -p highmem        ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=60   ## number of cores the job needs
-#SBATCH --mem-per-cpu=6G     # requesting memory per CPU
+#SBATCH --cpus-per-task=36   ## number of cores the job needs
+#SBATCH --mem-per-cpu=10G     # requesting memory per CPU
 
 trimmed="/dfs7/jje/jenyuw/SV-project-temp/result/trimmed"
 assemble="/dfs7/jje/jenyuw/SV-project-temp/result/assemble"
@@ -40,7 +40,7 @@ task = all
 rewrite = yes
 deltmp = yes
 
-parallel_jobs =10 #M gb memory, between M/64~M/32
+parallel_jobs =9 #M gb memory, between M/64~M/32
 input_type = raw
 read_type = ${read_type} # clr, ont, hifi
 input_fofn = ${assemble}/${SLURM_ARRAY_TASK_ID}.input.fofn
@@ -51,15 +51,15 @@ read_cutoff = 1k
 genome_size = 135m
 seed_depth = 45 #you can try to set it 30-45 to get a better assembly result
 seed_cutoff = 0
-sort_options = -m 50g -t 6 #m=M/(TOTAL_INPUT_BASES * 1.2/4)
-minimap2_options_raw = -t 6
+sort_options = -m 40g -t 4 #m=M/(TOTAL_INPUT_BASES * 1.2/4)
+minimap2_options_raw = -t 4
 pa_correction = 3 #M/(TOTAL_INPUT_BASES * 1.2/4)
-correction_options = -p 6 #P cores, P/parallel_jobs
+correction_options = -p 4 #P cores, P/parallel_jobs
 
 [assemble_option]
-minimap2_options_cns = -t 6 -k17 -w17
-minimap2_options_map = -t 6 #P cores, P/parallel_jobs
-nextgraph_options = -a 1
+minimap2_options_cns = -t 4 -k17 -w17
+minimap2_options_map = -t 4 #P cores, P/parallel_jobs
+nextgraph_options = -a 1 -q 10 #usuallu best according to the authors
 " >${assemble}/${SLURM_ARRAY_TASK_ID}.run.cfg
 
 nextDenovo ${assemble}/${SLURM_ARRAY_TASK_ID}.run.cfg

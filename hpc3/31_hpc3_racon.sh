@@ -32,7 +32,7 @@ name=$(echo $k | gawk -F "/" '{print $8}' | sed "s/_${i}//g")
 echo $name
 read=${trimmed}/${name}.trimmed.fastq.gz
 read_type=$2
-mapping_option=(["CLR"]="map-pb" ["hifi"]="asm20" ["ONT"]="map-ont")
+declare -A mapping_option=(["CLR"]="map-pb" ["hifi"]="asm20" ["ONT"]="map-ont")
     if [[ $2 != "CLR" && $2 != "hifi" && $2 != "ONT" ]]
     then
     echo "The second argument can only be one of \"CLR, hifi, ONT\""
