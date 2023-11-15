@@ -3,7 +3,7 @@
 #SBATCH --job-name=cute    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p standard       ## partition/queue name
-#SBATCH --array=2-62%1      ## number of tasks to launch (wc -l prefixes.txt)
+#SBATCH --array=1-62%1      ## number of tasks to launch (wc -l prefixes.txt)
 #SBATCH --cpus-per-task=16   ## number of cores the job needs-x map-ont
 #SBATCH --mem-per-cpu=3G     # requesting memory per CPU
 
@@ -31,6 +31,7 @@ name=$(basename ${file}|sed s/".trimmed-ref.sort.bam"//g)
 read_type=`echo ${name} | gawk -F "_" '{print $2}'`
 
 echo "name is $name "
+echo "read_type is $read_type "
 
 module load python/3.10.2
 
@@ -73,8 +74,6 @@ then
 else
 echo "The read type is not recognized"
 fi
-
-
 
 module unload python/3.10.2
 

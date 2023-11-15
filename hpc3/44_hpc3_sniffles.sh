@@ -22,7 +22,7 @@ read_type=`echo ${name} | gawk -F "_" '{print $2}'`
 
 module load python/3.10.2
 
-sniffles --threads ${nT} --allow-overwrite --sample-id ${name}-snif \
+sniffles --threads ${nT} --allow-overwrite --sample-id ${name}_snif \
 --minsupport 10 \
 --minsvlen 50 --mapq 20 --min-alignment-length 500 \
 --cluster-merge-pos 270 \

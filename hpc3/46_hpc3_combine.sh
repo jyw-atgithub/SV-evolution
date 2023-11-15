@@ -32,9 +32,11 @@ bcftools index -f -t  ${con_SVs}/${name}.3.vcf.gz
 #Truvari require a .tbi index
 module load python/3.10.2
 #--intra is only provided later than v4.2 (experimental)
-truvari collapse --intra -k maxqual --sizemax 50000000 \
+truvari collapse --intra -k maxqual --sizemax 200000000 \
 -i ${con_SVs}/${name}.3.vcf.gz -o ${con_SVs}/${name}.tru_con.vcf \
 -c ${con_SVs}/${name}.tru_collapsed.vcf -f ${ref_genome}
+
+bgzip -@ ${nT} -k ${con_SVs}/${name}.tru_con.vcf
 
 module unload python/3.10.2
 echo " This is the end!"
