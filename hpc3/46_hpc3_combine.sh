@@ -4,7 +4,7 @@
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p standard       ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=8   ## number of cores the job needs-x map-ont
+#SBATCH --cpus-per-task=12   ## number of cores the job needs-x map-ont
 #SBATCH --mem-per-cpu=6G     # requesting memory per CPU
 source ~/.bashrc
 
@@ -17,13 +17,13 @@ nT=$SLURM_CPUS_PER_TASK
 file=`head -n $SLURM_ARRAY_TASK_ID ${aligned_bam}/alignedlist.txt |tail -n 1`
 name=$(basename ${file}|sed s/".trimmed-ref.sort.bam"//g)
 
-#We are using bcftools v18 and samtools v18!! 
+#We are using bcftools v18 and samtools v18!!
 ## combiSV is not a good tool here. It's output content is too simple!!
 
 for i in `ls ${SVs}/${name}.*.filtered.vcf`
 do
-bgzip -@ ${nT} -f -k ${i}q
-bcftools index -f -t  ${i}.gz
+bgzip -@ ${nT} -f -k ${i}
+bcftools index -f -t ${i}.gz
 done
 
 ls ${SVs}/${name}.*.filtered.vcf.gz
@@ -33,10 +33,9 @@ bcftools index -f -t  ${con_SVs}/${name}.3.vcf.gz
 module load python/3.10.2
 #--intra is only provided later than v4.2 (experimental)
 truvari collapse --intra -k maxqual --sizemax 200000000 \
--i ${con_SVs}/${name}.3.vcf.gz -o ${con_SVs}/${name}.tru_con.vcf \
--c ${con_SVs}/${name}.tru_collapsed.vcf -f ${ref_genome}
-
-bgzip -@ ${nT} -k ${con_SVs}/${name}.tru_con.vcf
+-i ${con_SVs}/${name}.3.vcf.gz \
+-c ${con_SVs}/${name}.tru_collapsed.vcf -f ${ref_genome} |\
+bcftools sort -m 2G --write-index |bgzip -@ ${nT} > ${con_SVs}/${name}.tru_con.sort.vcf
 
 module unload python/3.10.2
 echo " This is the end!"

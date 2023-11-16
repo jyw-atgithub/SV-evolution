@@ -28,6 +28,7 @@ bcftools sort --write-index --max-mem 2G -O z -o ${SVs}/${name}.${prog}.sort.vcf
 bcftools view --threads ${nT} -r 2L,2R,3L,3R,4,X,Y \
 -i 'QUAL >= 10 && FILTER = "PASS"'  -O v -o - ${SVs}/${name}.${prog}.sort.vcf.gz |\
 sed 's/SVTYPE=DUP:INT/SVTYPE=DUP/g ; s/SVTYPE=DUP:TANDEM/SVTYPE=DUP/g ' |\
+sed 's/DUP_TANDEM/DUP/g; s/DUP:TANDEM/DUP/g; s/DUP_INT/DUP/g; s/DUP:INT/DUP/g' |\
 bcftools view --threads ${nT} -O v -o ${SVs}/${name}.${prog}.filtered.vcf
 #bgzip -f -dk ${SVs}/${name}.${prog}.filtered.vcf.gz
 
