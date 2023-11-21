@@ -70,10 +70,10 @@ echo "the read type is ${read_type}"
 
 module load python/3.10.2
 
-assembler="Flye"
+assembler="flye"
 for i in $(echo $assembler)
 do
-    if [[ $i == "Flye" ]]
+    if [[ $i == "flye" ]]
     then
     echo "Nextpolish $i now"
     polish_Np "${polishing}/${name}.${i}.racon.fasta" "${read_type}" "3"

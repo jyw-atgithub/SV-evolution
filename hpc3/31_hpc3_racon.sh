@@ -4,8 +4,8 @@
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p highmem       ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=36   ## number of cores the job needs
-#SBATCH --mem-per-cpu=6G     # requesting memory per CPU
+#SBATCH --cpus-per-task=10   ## number of cores the job needs
+#SBATCH --mem-per-cpu=10G     # requesting memory per CPU
 
 # racon --> nextpolisher +/- POLCA
 ### Racon*3  --> NextPolish*3
@@ -33,24 +33,28 @@ echo $name
 read=${trimmed}/${name}.trimmed.fastq.gz
 read_type=$2
 declare -A mapping_option=(["CLR"]="map-pb" ["hifi"]="asm20" ["ONT"]="map-ont")
-    if [[ $2 != "CLR" && $2 != "hifi" && $2 != "ONT" ]]
-    then
-    echo "The second argument can only be one of \"CLR, hifi, ONT\""
-    fi
+if [[ $2 != "CLR" && $2 != "hifi" && $2 != "ONT" ]]
+then
+echo "The second argument can only be one of \"CLR, hifi, ONT\""
+fi
 round=$3
 input=${k}
-    for ((count=1; count<=${round};count++))
-    do
-    echo "round $count"
-    echo "input is $input"
-    minimap2 -x ${mapping_option[$read_type]} -t ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.paf ${input} ${read}
-    racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} >${polishing}/${name}.${i}.racon.fasta
-    if ((${count}!=${round}))
-    then
-        mv ${polishing}/${name}.${i}.racon.fasta ${polishing}/${name}.${i}.racontmp.fasta
-        input=${polishing}/${name}.${i}.racontmp.fasta
-    fi
-    done
+for ((count=1; count<=${round};count++))
+do
+echo "round $count"
+echo "input is $input"
+echo "the mapping option is ${mapping_option[$read_type]}"
+minimap2 -x ${mapping_option[$read_type]} -t ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.paf ${input} ${read}
+echo "after manimap2"
+racon -t ${nT} ${read} ${aligned_bam}/${name}.trimmed-${i}.paf ${input} >${polishing}/${name}.${i}.racon.fasta
+echo "after racon"
+if ((${count}!=${round}))
+then
+mv ${polishing}/${name}.${i}.racon.fasta ${polishing}/${name}.${i}.racontmp.fasta
+input=${polishing}/${name}.${i}.racontmp.fasta
+echo "round round round"
+fi
+done
 rm ${aligned_bam}/${name}.trimmed-${i}.paf
 rm ${polishing}/${name}.${i}.racontmp.fasta
 done
@@ -65,10 +69,10 @@ echo "the read type is ${read_type}"
 
 
 conda activate post-proc
-assembler="Flye"
+assembler="flye"
 for i in `echo $assembler`
 do
-    if [[ $i == "Flye" ]]
+    if [[ $i == "flye" ]]
     then
     echo "racon $i assembly now"
     polish_Ra "${assemble}/${name}_${i}/assembly.fasta" "${read_type}" "3"

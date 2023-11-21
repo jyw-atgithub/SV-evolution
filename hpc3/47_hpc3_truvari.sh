@@ -15,18 +15,27 @@ aligned_bam="/dfs7/jje/jenyuw/SV-project-temp/result/aligned_bam"
 con_SVs="/dfs7/jje/jenyuw/SV-project-temp/result/consensus_SVs"
 merged_SVs="/dfs7/jje/jenyuw/SV-project-temp/result/merged_SVs"
 
+#parallel -j 8 bgzip -dk -@ 2 {} ::: `ls ${con_SVs}/*.tru_con.sort.vcf.gz`
+#this only need once
 
+ls ${con_SVs}/*.tru_con.sort.vcf >${con_SVs}/sample_files.txt
+SURVIVOR merge ${con_SVs}/sample_files.txt 0 1 1 1 0 50 ${merged_SVs}/merge.tru_con.vcf
+#bcftools merge -m none ${con_SVs}/*.tru_con.sort.vcf.gz | bgzip -@ ${nT} > ${merged_SVs}/merge.tru_con.vcf.gz
+#I don't know why bcftools merge report error, so I use SURVIVOR instead.
+bgzip -k -f -@ ${nT} ${merged_SVs}/merge.tru_con.vcf
+bcftools sort --max-mem 2G ${merged_SVs}/merge.tru_con.vcf.gz |bgzip -@ ${nT} > ${merged_SVs}/merge.tru_con.sort.vcf.gz
+bcftools index -f -t ${merged_SVs}/merge.tru_con.sort.vcf.gz
+
+wait
 module load python/3.10.2
 
-bcftools merge -m none --force-samples ${con_SVs}/*.tru_con.sort.vcf | bgzip -@ ${nT} > ${merged_SVs}/merge.tru_con.vcf.gz
-
-tabix -f -p vcf ${merged_SVs}/merge.tru_con.vcf.gz
-
 truvari collapse --sizemax 200000000 -k maxqual \
--i ${merged_SVs}/merge.tru_con.vcf.gz \
--c ${merged_SVs}/truvari_collapsed.vcf -f ${ref_genome} | bgzip -@ ${nT} > ${merged_SVs}/truvari.tru_con.vcf.gz
+-i ${merged_SVs}/merge.tru_con.sort.vcf.gz \
+-c ${merged_SVs}/truvari_collapsed.vcf -f ${ref_genome} |\
+bcftools sort --max-mem 2G |\
+bgzip -@ ${nT} > ${merged_SVs}/truvari.tru_con.vcf.gz
 
-bcftools sort --max-mem 2G -O v -o ${merged_SVs}/truvari.tru_con.sort.vcf ${merged_SVs}/truvari.tru_con.vcf.gz
+bcftools index -f -t ${merged_SVs}/truvari.tru_con.vcf.gz
 
 module unload python/3.10.2
-echo " This is the end!"
+echo "This is the end!"
