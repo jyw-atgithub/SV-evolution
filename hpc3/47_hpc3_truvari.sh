@@ -17,13 +17,15 @@ merged_SVs="/dfs7/jje/jenyuw/SV-project-temp/result/merged_SVs"
 
 #parallel -j 8 bgzip -dk -@ 2 {} ::: `ls ${con_SVs}/*.tru_con.sort.vcf.gz`
 #this only need once
-
+#SURVIVOR can NOT take vcf.gz
 ls ${con_SVs}/*.tru_con.sort.vcf >${con_SVs}/sample_files.txt
 SURVIVOR merge ${con_SVs}/sample_files.txt 0 1 1 1 0 50 ${merged_SVs}/merge.tru_con.vcf
+## SURVIVOR requires much memorey!
 #bcftools merge -m none ${con_SVs}/*.tru_con.sort.vcf.gz | bgzip -@ ${nT} > ${merged_SVs}/merge.tru_con.vcf.gz
 #I don't know why bcftools merge report error, so I use SURVIVOR instead.
 bgzip -k -f -@ ${nT} ${merged_SVs}/merge.tru_con.vcf
 bcftools sort --max-mem 2G ${merged_SVs}/merge.tru_con.vcf.gz |bgzip -@ ${nT} > ${merged_SVs}/merge.tru_con.sort.vcf.gz
+#This sort step is pretty slow and takes much temp space. HPC3 ALWAYS FAILED ON IT! Do on Thoth
 bcftools index -f -t ${merged_SVs}/merge.tru_con.sort.vcf.gz
 
 wait
