@@ -33,7 +33,7 @@ echo "name is $name"
 round=$3
 read=${trimmed}/${name}.trimmed.fastq.gz
 #pay attention to the read name, .fastq.gz or .fastq
-read_type=$2 
+read_type=$2
 echo "the second argument is $2, is read_type $read_type"
 declare -A mapping_option=(["CLR"]='map-pb' ["hifi"]='asm20' ["ONT"]='map-ont')
 echo "The mapping option is ${mapping_option[$read_type]}"
@@ -49,10 +49,10 @@ input=${j}
     minimap2 -a -x ${mapping_option[$read_type]} -t ${nT} ${input} ${read} |\
     samtools sort - -m 2g --threads ${nT} -o ${aligned_bam}/${name}.trimmed-${i}.sort.bam
     samtools index ${aligned_bam}/${name}.trimmed-${i}.sort.bam
-    ls ${aligned_bam}/${name}.trimmed-${i}.sort.bam > ${polishing}/${SLURM_ARRAY_TASK_ID}.lgs.sort.bam.fofn
+    ls ${aligned_bam}/${name}.trimmed-${i}.sort.bam > ${polishing}/${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID}.${i}.lgs.sort.bam.fofn
     # remember to give different names of reppeated used config or fofn files!!!
     # Nextpolish usually finish within 3 hours. It does not know whether the mapping result matches or not. 
-    python3 ${nplib}/nextpolish2.py -g ${input} -l ${polishing}/${SLURM_ARRAY_TASK_ID}.lgs.sort.bam.fofn \
+    python3 ${nplib}/nextpolish2.py -g ${input} -l ${polishing}/${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID}.${i}.lgs.sort.bam.fofn \
     -r ${read_type} -p ${nT} -sp -o ${polishing}/${name}.${i}.nextpolish.fasta
     if ((${count}!=${round}));then
         mv ${polishing}/${name}.${i}.nextpolish.fasta ${polishing}/${name}.${i}.nextpolishtmp.fasta;
@@ -62,7 +62,7 @@ input=${j}
 rm ${polishing}/${name}.${i}.nextpolishtmp.fasta
 rm ${aligned_bam}/${name}.trimmed-${i}.sort.bam
 rm ${aligned_bam}/${name}.trimmed-${i}.sort.bam.bai
-#rm ${polishing}/${SLURM_ARRAY_TASK_ID}.lgs.sort.bam.fofn
+#rm ${SLURM_JOB_ID}.${SLURM_ARRAY_TASK_ID}.${i}.lgs.sort.bam.fofn
 done
 }
 
@@ -85,7 +85,7 @@ do
     then
     echo "Nestpolish $i now"
     polish_Np "${polishing}/${name}.${i}.racon.fasta" "${read_type}" "3"
-    elif [[ $i == "nextdenovo" ]]
+    elif [[ $i == "nextdenovo-45" ]]
     then
     echo "Nextpolish $i now"
     polish_Np "${polishing}/${name}.${i}.racon.fasta" "${read_type}" "3"

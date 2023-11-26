@@ -3,8 +3,8 @@
 #SBATCH --job-name=racon    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p highmem       ## partition/queue name
-#SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=10   ## number of cores the job needs
+#SBATCH --array=18      ## number of tasks to launch (wc -l prefixes.txt)
+#SBATCH --cpus-per-task=30   ## number of cores the job needs
 #SBATCH --mem-per-cpu=10G     # requesting memory per CPU
 
 # racon --> nextpolisher +/- POLCA
@@ -27,7 +27,7 @@ for k in $(ls $1 2> /dev/null)
 do
 #echo "first arg is " $1
 #echo "second arg is " $2
-echo "k is " $k
+echo "k is " "$k"
 name=$(echo $k | gawk -F "/" '{print $8}' | sed "s/_${i}//g")
 echo $name
 read=${trimmed}/${name}.trimmed.fastq.gz
@@ -69,7 +69,7 @@ echo "the read type is ${read_type}"
 
 
 conda activate post-proc
-assembler="flye"
+assembler="canu"
 for i in `echo $assembler`
 do
     if [[ $i == "flye" ]]
