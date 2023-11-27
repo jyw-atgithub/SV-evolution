@@ -1,0 +1,4 @@
+Note for Dry-lab
+
+Nextdenovo never works on AB8
+Nextdenovo did not work well on: B2_CLR, A7_CLR, B1_CLR, ORE_CLR
