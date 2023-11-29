@@ -122,7 +122,7 @@ bcftools isec --collapse none -n =2 -O v -o ancestral.vcf truvari_merge.sort.vcf
 
 truvari consistency truvari_merge.sort.vcf.gz dsim-dmel.vcf.gz
 
-
+/pub/jenyuw/Software/NextDenovo/bin/seq_stat -f 500 -g 130m -d 20 input.fofn 
 
 ## virtualenv of python3 is installed with pip.
 ## virtualenv is different from venv

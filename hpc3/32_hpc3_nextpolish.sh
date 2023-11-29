@@ -3,7 +3,7 @@
 #SBATCH --job-name=np    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p highmem        ## partition/queue name
-#SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
+#SBATCH --array=18      ## number of tasks to launch (wc -l prefixes.txt)
 #SBATCH --cpus-per-task=24   ## number of cores the job needs
 #SBATCH --mem-per-cpu=10G     # requesting memory per CPU
 
@@ -74,7 +74,7 @@ echo "the read type is ${read_type}"
 
 module load python/3.10.2
 
-assembler="flye"
+assembler="canu"
 for i in $(echo $assembler)
 do
     if [[ $i == "flye" ]]

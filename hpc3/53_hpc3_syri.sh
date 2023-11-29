@@ -19,26 +19,21 @@ assemble="/dfs7/jje/jenyuw/SV-project-temp/result/assemble"
 scaffold="/dfs7/jje/jenyuw/SV-project-temp/result/scaffold"
 nT=$SLURM_CPUS_PER_TASK
 
-if [[ $SLURM_ARRAY_TASK_ID == 1 ]]
-then
-ls ${scaffold}/*/ragtag.scaffold.fasta > ${scaffold}/scfd_list.txt
-fi
+
+
 file=`head -n $SLURM_ARRAY_TASK_ID ${scaffold}/scfd_list.txt |tail -n 1`
 name=$(echo ${file} | cut -d '/' -f 8)
-echo "the file is ${file}"
-echo "the name is ${name}"
 
+module load python/3.10.2
 
-#mv ${scaffold}/rr${SLURM_ARRAY_TASK_ID}/ragtag.scaffold.fasta ${scaffold}/${name}.scaffold.fasta
-
-minimap2 -t ${nT} -a -x asm5 --cs --eqx \
-${ref_genome} ${scaffold}/${name}/ragtag.scaffold.fasta \
-|samtools view -b -h -@ ${nT} -o -|samtools sort -@ ${nT} -o ${aligned_bam}/${name}.pat1-ref.sort.bam
-samtools index ${aligned_bam}/${name}.pat1-ref.sort.bam
-
-conda activate sv-calling
 svim-asm haploid --sample ${name}_svimASM --min_sv_size 50 \
 ${SVs}/${name}_svimASM ${aligned_bam}/${name}.pat1-ref.sort.bam ${ref_genome}
 
+syri  ${aligned_bam}/${name}.pat1-ref.sort.bam -r ${ref_genome} -q ${file} -F B --nc 4 --samplename ${name}_syri 
+[--dir DIR] [--prefix PREFIX] [--nc NCORES] [--novcf]
+            [] [--nosr] [--invgaplen INVGL] [--tdgaplen TDGL] [--tdmaxolp TDOLP] [-b BRUTERUNTIME] [--unic TRANSUNICOUNT]
+            [--unip TRANSUNIPERCENT] [--inc INCREASEBY] [--no-chrmatch] [--nosv] [--nosnp] [--all] [--allow-offset OFFSET] [--cigar] [-s SSPATH] [--hdrseq]
+
 mv ${SVs}/${name}_svimASM/variants.vcf ${SVs}/${name}.svimASM.vcf 
-conda deactivate
+
+module unload python/3.10.2

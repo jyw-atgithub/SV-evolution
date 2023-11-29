@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=np    ## Name of the job.
+#SBATCH --job-name=busco      ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p highmem        ## partition/queue name
 #SBATCH --array=18      ## number of tasks to launch (wc -l prefixes.txt)

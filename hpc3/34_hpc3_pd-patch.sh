@@ -82,12 +82,15 @@ echo "${polishing}/${name}.nextdenovo-45.nextpolish.fasta" "Exists"
 conda activate ragtag
 ragtag.py patch -w -u -o ${patched}/${name}_1 --aligner 'nucmer' ${purge_dups}/${name}.flye.polished.purged/purged.fa ${polishing}/${name}.nextdenovo-45.nextpolish.fasta
 conda deactivate
+# 2nd purge_dups
+purge ${nT} ${mapping_option[$read_type]} ${patched}/${name}_1/ragtag.patch.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}.nd
+elif [[ -f ${polishing}/${name}.canu.nextpolish.fasta ]]
+then
 else
 echo "polished nextdenovo assembly of ${name} does not exist"
 exit
 fi
 
-# 2nd purge_dups
-purge ${nT} ${mapping_option[$read_type]} ${patched}/${name}_1/ragtag.patch.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}.nd
+
 
 echo "This is the end!!"
