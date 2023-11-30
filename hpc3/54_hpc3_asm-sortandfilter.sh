@@ -34,7 +34,7 @@ bcftools view --threads ${nT} -r 2L,2R,3L,3R,4,X,Y \
 ##SVIMasm do NOT give quality scores!
 sed 's/DUP_TANDEM/DUP/g; s/DUP:TANDEM/DUP/g; s/DUP_INT/DUP/g; s/DUP:INT/DUP/g' |\
 bcftools view --threads ${nT} -O v -o ${SVs}/${name}.${prog}.filtered.vcf
-#bgzip -f -dk ${SVs}/${name}.${prog}.filtered.vcf.gz
+bgzip -f -dk ${SVs}/${name}.${prog}.filtered.vcf.gz
 
 rm ${SVs}/${name}.${prog}.sort.vcf.gz
 rm ${SVs}/${name}.${prog}.sort.vcf.gz.csi

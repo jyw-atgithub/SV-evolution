@@ -115,12 +115,13 @@ fastq-dump --split-spot --stdout  /dfs7/jje/jenyuw/SV-project-temp/raw/${strain}
 pigz -p 15 -v  >/dfs7/jje/jenyuw/SV-project-temp/raw/${strain}_${tech}.fastq.gz
 
 
-bcftools query -f '%CHROM\t%POS\t%INFO/SVTYPE\t%INFO/SVLEN\t[ %GT] \n' truvari_merge.vcf>extraction.tsv
+bcftools query -f '%CHROM\t%POS\t%INFO/SVTYPE\t%INFO/SVLEN\t[ %GT] \n' truvari_merge.vcf >extraction.tsv
+bcftools query -f '%CHROM\t%POS\t%INFO/SVTYPE\t%INFO/SVLEN\t[ %GT] \n' truvari.svimASM.vcf.gz >extraction2.tsv
 
 bedtools intersect -a truvari_merge.sort.vcf  -b dsim-dmel.vcf
 bcftools isec --collapse none -n =2 -O v -o ancestral.vcf truvari_merge.sort.vcf.gz dsim-dmel.vcf.gz
 
-truvari consistency truvari_merge.sort.vcf.gz dsim-dmel.vcf.gz
+truvari consistency truvari.tru_con.vcf.gz truvari.svimASM.vcf.gz
 
 /pub/jenyuw/Software/NextDenovo/bin/seq_stat -f 500 -g 130m -d 20 input.fofn 
 
