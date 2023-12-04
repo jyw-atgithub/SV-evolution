@@ -6,10 +6,8 @@
 #SBATCH --array=2-61     ## number of tasks to launch (wc -l prefixes.txt)
 #SBATCH --cpus-per-task=12   ## number of cores the job needs
 #SBATCH --mem-per-cpu=6G     # requesting memory per CPU
-
-##############################################################################
-###This ia a crude version. We need to feed descent assemblies afterwards. ###
-##############################################################################
+#SBATCH --tmp=100G                ## requesting 100 GB local scratch
+#SBATCH --constraint=fastscratch  ## requesting nodes with fast scratch in /tmp
 
 purge_dups="/dfs7/jje/jenyuw/SV-project-temp/result/purge_dups"
 ref_genome="/dfs7/jje/jenyuw/SV-project-temp/reference/dmel-all-chromosome-r6.49.fasta"
@@ -22,17 +20,17 @@ source ~/.bashrc
 
 if [[ $SLURM_ARRAY_TASK_ID == 1 ]]
 then
-ls ${patched}/*_1/ragtag.patch.fasta > ${patched}/patched_1_list.txt
+ls ${purge_dups}/*.final.fasta > ${purge_dups}/final.list.txt
 fi
 
-file=`head -n $SLURM_ARRAY_TASK_ID ${patched}/patched_1_list.txt |tail -n 1`
-name=$(echo ${file} | cut -d '/' -f 8 |cut -d '_' -f 1-2)
+file=`head -n $SLURM_ARRAY_TASK_ID ${purge_dups}/final.list.txt |tail -n 1`
+name=$(basename ${file} | cut -d '.' -f 1)
 echo "the file is ${file}"
 echo "the name is ${name}"
 
 conda activate ragtag
 
-ragtag.py scaffold -r -w -u --aligner 'nucmer' -o ${scaffold}/${name} ${ref_genome} ${file}
+ragtag.py scaffold -r -w --aligner 'nucmer' -o ${scaffold}/${name} ${ref_genome} ${file}
 ##Nnucmer canNOT be multithreaded.
 conda deactivate
 

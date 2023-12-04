@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=busco    ## Name of the job.
+#SBATCH --job-name="busco"    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p standard        ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
@@ -17,7 +17,7 @@ assemble="/dfs7/jje/jenyuw/SV-project-temp/result/assemble"
 purge_dups="/dfs7/jje/jenyuw/SV-project-temp/result/purge_dups"
 patched="/dfs7/jje/jenyuw/SV-project-temp/result/patched"
 busco_out="/dfs7/jje/jenyuw/SV-project-temp/result/busco_out"
-
+compleasm_kit="/pub/jenyuw/Software/compleasm_kit"
 ## prep
 source ~/.bashrc
 nT=$SLURM_CPUS_PER_TASK
@@ -33,7 +33,6 @@ echo "file is ${file}"
 name=`echo ${file}|gawk -F "/" '{print $8}'|cut -d "." -f 1`
 echo "name is ${name}"
 
-#busco
 conda activate BUSCO
 
 if [[ $SLURM_ARRAY_TASK_ID == 1 ]]
@@ -50,13 +49,13 @@ do
         then
         echo "${assemble}/${name}_${i}/assembly.fasta"
         this="${assemble}/${name}_${i}/assembly.fasta"
-        busco -i ${this} -l diptera_odb10 --out_path ${busco_out} -o ${name}_${i}_ori -m genome -c ${nT}
+        busco -f -i ${this} -l diptera_odb10 --out_path ${busco_out} -o ${name}_${i}_busco_ori -m genome -c ${nT}
         else
         this="${assemble}/${name}_${i}/${name}.contigs.fasta"
         echo "${this}" " does not exist"
         echo "${this}" >> ${busco_out}/busco_missing.txt
         fi
-    fi 
+    fi
 
     if [[ $i == "canu" ]]
     then
@@ -64,7 +63,7 @@ do
         then
         echo "${assemble}/${name}_${i}/${name}.contigs.fasta"
         this="${assemble}/${name}_${i}/${name}.contigs.fasta"
-        busco -i ${this} -l diptera_odb10 --out_path ${busco_out} -o ${name}_${i}_ori -m genome -c ${nT}
+        busco -f -i ${this} -l diptera_odb10 --out_path ${busco_out} -o ${name}_${i}_busco_ori -m genome -c ${nT}
         else
         this="${assemble}/${name}_${i}/${name}.contigs.fasta"
         echo "${this}" " does not exist"
@@ -78,7 +77,7 @@ do
         then
         echo "${assemble}/${name}_${i}/03.ctg_graph/nd.asm.fasta"
         this="${assemble}/${name}_${i}/03.ctg_graph/nd.asm.fasta"
-        busco -i ${this} -l diptera_odb10 --out_path ${busco_out} -o ${name}_${i}_ori -m genome -c ${nT}
+        busco -f -i ${this} -l diptera_odb10 --out_path ${busco_out} -o ${name}_${i}_busco_ori -m genome -c ${nT}
         else
         this="${assemble}/${name}_${i}/${name}.contigs.fasta"
         echo "${this}" " does not exist"
@@ -87,8 +86,10 @@ do
     fi
 done
 
+
+
+busco -f -i ${purge_dups}/${name}.final.fasta -l diptera_odb10 --out_path ${busco_out} -o ${name}_final_busco_final -m genome -c ${nT}
+
 conda deactivate
 
-conda activate BUSCO
-
-conda deactivate
+echo "This is the end!!"

@@ -2,10 +2,14 @@
 
 #SBATCH --job-name="pd&patch"    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
-#SBATCH -p standard        ## partition/queue name
+#SBATCH -p highmem        ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=24   ## number of cores the job needs
-#SBATCH --mem-per-cpu=6G     # requesting memory per CPU
+#SBATCH --cpus-per-task=32   ## number of cores the job needs
+#SBATCH --mem-per-cpu=10G     # requesting memory per CPU
+
+#consider
+###SBATCH --tmp=100G                ## requesting 100 GB local scratch
+###SBATCH --constraint=fastscratch  ## requesting nodes with fast scratch in /tmp
 
 ## input "polished Flye asm" --> purge_dups --> ragtag patch with "polished Nextdenovo asm" 
 ## --> purge_dups --> ragtag patch with "polished Canu asm" --> purge_dups --> "final purged asm"
@@ -52,45 +56,55 @@ function purge {
     mkdir ${purge_dups}/${prefix}.polished.purged
     cd ${purge_dups}/${prefix}.polished.purged
 
-    minimap2 -t $1 -x $2 $3 $4 | pigz -p 10 -c - > ${prefix}.paf.gz
+    minimap2 -t $1 -x $2 $3 $4 | pigz -p $1 -c - > ${prefix}.paf.gz
     ${pd_bin}/pbcstat ${prefix}.paf.gz
     ${pd_bin}/calcuts PB.stat > cutoffs 2>calcults.log
     ${pd_bin}/split_fa $3 > ${prefix}.split
-    minimap2 -t $1 -x asm5 -DP ${prefix}.split ${prefix}.split |pigz -p 10 -c - > ${prefix}.split.self.paf.gz
+    minimap2 -t $1 -x asm5 -DP ${prefix}.split ${prefix}.split |pigz -p $1 -c - > ${prefix}.split.self.paf.gz
     ${pd_bin}/purge_dups -2 -T cutoffs -c PB.base.cov ${prefix}.split.self.paf.gz > dups.bed 2> purge_dups.log
 
     ${pd_bin}/get_seqs -e dups.bed $3
 }
 
 
-
-if [[ -f ${polishing}/${name}.canu.nextpolish.fasta ]]
-then
-echo "${polishing}/${name}.canu.nextpolish.fasta" "Exists"
-else
-echo "polished canu assembly of ${name} does not exist"
-fi
-
 # 1st purge_dups
 purge ${nT} ${mapping_option[$read_type]} ${file} ${trimmed}/${name}.trimmed.fastq.gz ${name}.flye
 
 
 #check the existance of polished assmblies and then patch with ragtag
-if [[ -f ${polishing}/${name}.nextdenovo-45.nextpolish.fasta ]]
+if [[ -f ${polishing}/${name}.canu.nextpolish.fasta  ]]
 then
-echo "${polishing}/${name}.nextdenovo-45.nextpolish.fasta" "Exists"
+echo "${polishing}/${name}.canu.nextpolish.fasta" " Exists"
 conda activate ragtag
-ragtag.py patch -w -u -o ${patched}/${name}_1 --aligner 'nucmer' ${purge_dups}/${name}.flye.polished.purged/purged.fa ${polishing}/${name}.nextdenovo-45.nextpolish.fasta
+ragtag.py patch -w -o ${patched}/${name}_1 --aligner 'nucmer' \
+${purge_dups}/${name}.flye.polished.purged/purged.fa \
+${polishing}/${name}.canu.nextpolish.fasta
 conda deactivate
 # 2nd purge_dups
-purge ${nT} ${mapping_option[$read_type]} ${patched}/${name}_1/ragtag.patch.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}.nd
-elif [[ -f ${polishing}/${name}.canu.nextpolish.fasta ]]
-then
+purge ${nT} ${mapping_option[$read_type]} ${patched}/${name}_1/ragtag.patch.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}.fandc
 else
-echo "polished nextdenovo assembly of ${name} does not exist"
+echo "polished canu assembly of ${name} does not exist"
+cp ${purge_dups}/${name}.flye.polished.purged/purged.fa ${purge_dups}/${name}.final.fasta
+echo "This is the end!!"
 exit
 fi
 
-
+if [[ -f ${polishing}/${name}.nextdenovo-45.nextpolish.fasta ]]
+then
+echo "${polishing}/${name}.nextdenovo-45.nextpolish.fasta" " Exists"
+conda activate ragtag
+ragtag.py patch -w -o ${patched}/${name}_2 --aligner 'nucmer' \
+${purge_dups}/${name}.fandc.polished.purged/purged.fa \
+${polishing}/${name}.nextdenovo-45.nextpolish.fasta
+conda deactivate
+# 3rd purge_dups
+purge ${nT} ${mapping_option[$read_type]} ${patched}/${name}_2/ragtag.patch.fasta ${trimmed}/${name}.trimmed.fastq.gz ${name}.fandcandn
+cp ${purge_dups}/${name}.fandcandn.polished.purged/purged.fa ${purge_dups}/${name}.final.fasta
+else
+echo "polished nextdenovo assembly of ${name} does not exist"
+cp ${purge_dups}/${name}.fandc.polished.purged/purged.fa ${purge_dups}/${name}.final.fasta
+echo "This is the end!!"
+exit
+fi
 
 echo "This is the end!!"

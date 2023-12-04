@@ -20,6 +20,7 @@ read.vcf <- function(file, special.char="##", ...) {
   clean.lines=gsub("#CHROM", "CHROM", clean.lines)
   read.table(..., text=paste(clean.lines, collapse="\n"))
 }
+
 get.field <- function(samples, format, fieldName) {
   x=strsplit(samples, split=":")
   fields=unlist(strsplit(format, split=":")) 
@@ -58,7 +59,9 @@ variance.d <- function(n,S) {
 
 
 #read the file
-vcf <- read.vcf("all.consensus-005.vcf", header=TRUE, stringsAsFactors=FALSE)
+vcf <- read.vcf("truvari.svimASM.rn.vcf", header=TRUE, stringsAsFactors=FALSE)
+## if the quality score is ".", this function will report error.
+## sed s@"\t.\tPASS"@"\t10\tPASS"@g truvari.svimASM.vcf >truvari.svimASM.rn.vcf
 snp.vcf <- read.vcf("all.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
 snp.outside.vcf <- read.vcf("all.outside-1000.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
 syn.snp.vcf <- read.vcf("all.synSNPs.vcf", header=TRUE, stringsAsFactors=FALSE)
@@ -78,7 +81,7 @@ ncol(vcf)
 
 
 for (chr in total_chr){
-  for (what.to.filter in c("INS","DEL","DUP","INV", "TRA")){
+  for (what.to.filter in c("INS","DEL","DUP","INV", "BND")){
     #print(chr)
     vcf.part = vcf %>% filter(CHROM == chr) #calculate the window first 
     my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=win.size)
