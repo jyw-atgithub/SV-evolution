@@ -4,6 +4,8 @@
 srun -A jje_lab -c 4 --pty --x11 bash -i
 cd /pub/jenyuw/
 
+srun -A jje_lab -p highmem -c 32 --tmp=100G --pty --x11 bash -i
+
 sbank balance statement -a jje_lab
 sbank balance statement -u jenyuw
 
@@ -136,3 +138,6 @@ pip install medaka
 
 ## deactivate the virtialenv
 deactivate
+
+#SBATCH --tmp=100G                ## requesting 100 GB local scratch
+#SBATCH --constraint=fastscratch  ## requesting nodes with fast scratch in /tmp

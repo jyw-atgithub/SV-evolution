@@ -46,14 +46,14 @@ fixchr -c ${SVs}/${name}_SYRI/${name}.final-ref.sort.bam -F B \
 cat ${SVs}/${name}_SYRI/ref.filtered.fa| sed s/'>4'/'>chr4'/g > ${SVs}/${name}_SYRI/ref.filtered.rn.fa
 cat ${SVs}/${name}_SYRI/qry.filtered.fa| sed s/'>4'/'>chr4'/g > ${SVs}/${name}_SYRI/qry.filtered.rn.fa
 
-minimap2 -t ${nT} -a -x asm10 --cs --eqx \
+minimap2 -t ${nT} -a -x asm5 --cs --eqx \
 ${SVs}/${name}_SYRI/ref.filtered.rn.fa  ${SVs}/${name}_SYRI/qry.filtered.rn.fa \
 |samtools view -b -h -@ ${nT} -o -|samtools sort -@ ${nT} -o ${SVs}/${name}_SYRI/sort.bam
 samtools index ${SVs}/${name}_SYRI/sort.bam
 
 syri  -F B -c ${SVs}/${name}_SYRI/sort.bam -r ${SVs}/${name}_SYRI/ref.filtered.rn.fa \
 -q ${SVs}/${name}_SYRI/qry.filtered.rn.fa --dir ${SVs}/${name}_SYRI \
---nc 3 --nosnp --samplename ${name}_SYRI --unic 800
+--nc 3 --samplename ${name}_SYRI --prefix ${name}_mm2 --unic 500
 
 module unload python/3.10.2
 
@@ -62,3 +62,6 @@ rm ${SVs}/${name}_SYRI/r649.ref.fasta
 rm ${SVs}/${name}_SYRI/${name}.scaffold.fasta
 rm ${SVs}/${name}_SYRI/ref.filtered.fa
 rm ${SVs}/${name}_SYRI/qry.filtered.fa
+##grep -v "^#" result/SVs/A1_CLR_SYRI/syri.vcf | gawk '{print $3}' | cut -c 1-3 |sort |uniq -c
+
+echo "This is the end!!"
