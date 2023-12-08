@@ -117,9 +117,10 @@ nohup time truvari collapse -k common --sizemax 200000000 \
 -c ${polarizing}/all2sim.asm.collapsed.vcf &
 module unload python/3.10.2
 printf "sim2mel_mm2_svimASM">${polarizing}/filter.txt
-bcftools filter -i 'GT[@filter.txt]="hom"' ${polarizing}/all2sim.asm.collapsed.vcf.gz > all2sim.asm.onlysim.vcf
+bcftools filter -i 'GT[@filter.txt]="hom"' ${polarizing}/all2sim.asm.collapsed.vcf.gz |\
+bcftools sort -O z >  ${polarizing}/all2sim.asm.onlysim.vcf.gz
+bcftools index -t -f ${polarizing}/all2sim.asm.onlysim.vcf.gz
 # --> 601 SVs
-
 
 ###Second way to extract overlapping SVs
 bcftools isec --threads ${nT} -c none --regions-overlap pos --nfiles=2 -O z \
@@ -139,11 +140,17 @@ SURVIVOR merge ${polarizing}/svimasm_vcf.txt 0.05 2 1 1 0 50 ${polarizing}/allan
 bcftools filter -i 'GT[@filter.txt]="hom"' ${polarizing}/allandsim.asm.SURVIVOR.vcf > all2sim.asm.SURVIVOR.onlysim.vcf
 
 ## Now, extract the overlapping SVs
-bcftools isec -c none --regions-overlap pos -O z \
--p /dfs7/jje/jenyuw/SV-project-temp/result/polarizing/temp \
-${merged_SVs}/truvari.svimASM.vcf.gz ${polarizing}/all2sim.collapsed.sort.vcf.gz 
-# --> 1107 SVs 
-
-bedtools intersect 
-
--a ${polarizing}/all2sim.collapsed.sort.vcf.gz -b ${merged_SVs}/truvari.svimASM.vcf.gz -header > ${polarizing}/all2sim.collapsed.sort.overlap.vcf
+#bcftools isec -c none --regions-overlap pos -O z \
+#-p /dfs7/jje/jenyuw/SV-project-temp/result/polarizing/temp \
+#${merged_SVs}/truvari.svimASM.vcf.gz ${polarizing}/all2sim.asm.onlysim.vcf.gz
+#this yeiled no overlapping SVs
+$bcftools query -f '%ID\n' ${polarizing}/all2sim.asm.onlysim.vcf.gz >${polarizing}/onlysim.id
+cat ${polarizing}/onlysim.id |while read line
+do
+grep -E "${line}" ${merged_SVs}/truvari.svimASM.vcf |\
+sed s@'\.\/\.'@'hahaha'@g |sed s@'1\/1'@'\.\/\.'@g|sed s@'hahaha'@'1\/1'@g >>${polarizing}/reversed.txt
+grep -v "${line}" ${merged_SVs}/truvari.svimASM.vcf >>${polarizing}/nochange.txt
+done
+grep "#" ${merged_SVs}/truvari.svimASM.vcf >${polarizing}/header.txt
+cat ${polarizing}/header.txt ${polarizing}/nochange.txt ${polarizing}/reversed.txt >${polarizing}/polarized.vcf
+bcftools sort --max-mem 2G ${polarizing}/polarized.vcf.gz -O z -o polarized.sort.vcf.gz
