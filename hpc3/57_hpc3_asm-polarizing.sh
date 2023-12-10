@@ -19,12 +19,14 @@ nT=$SLURM_CPUS_PER_TASK
 cd /dfs7/jje/jenyuw/SV-project-temp/result/polarizing
 
 nucmer -t ${nT} --maxmatch -l 100 -c 500 --sam-long=${polarizing}/mumm4.sam ${dmel_ref} ${dsim_ref}
-cat ${polarizing}/mumm4.sam | sed 's/HD\ /HD/; s/1.0\ /1.0/; s/\tSO:coordinate/SO:coordinate/; s/VN1/VN:1/; s/HD/HD\t/; s/SO:unsorted/\tSO:unsorted/; s/@PG /@PG\t/; s/ PN/\tPN/; s/ VN/\tVN/; s/ CL/\tCL/' |\
+cat ${polarizing}/mumm4.sam |\
+sed 's/HD\ /HD/; s/1.0\ /1.0/; s/\tSO:coordinate/SO:coordinate/; s/VN1/VN:1/; s/HD/HD\t/; s/SO:unsorted/\tSO:unsorted/; s/@PG /@PG\t/; s/ PN/\tPN/; s/ VN/\tVN/; s/ CL/\tCL/' |\
+sed 's@\t10\t@\t30\t@g'|\
 samtools view -@ ${nT} -h --reference ${dmel_ref} - |samtools sort -@ ${nT} -O bam -o ${polarizing}/corrected.mumm4.bam
 samtools index -@ ${nT} ${polarizing}/corrected.mumm4.bam
 
 #nucmer -t ${nT} --maxmatch --delta=${polarizing}/mumm4.delta ${dmel_ref} ${dsim_ref}
-#svmu ${polarizing}/mumm4.delta ${dmel_ref} ${dsim_ref} l sam_lastz.txt prefix
+#svmu ${polarizing}/mumm4.delta ${dmel_ref} ${dsim_ref} l sam_lastz.txt svmu > svmu.tsv
 #Does not work well
 
 bash /pub/jenyuw/Software/MUMandCo-MUMandCov3.8/mumandco_v3.8.sh  \
@@ -117,10 +119,17 @@ nohup time truvari collapse -k common --sizemax 200000000 \
 -c ${polarizing}/all2sim.asm.collapsed.vcf &
 module unload python/3.10.2
 printf "sim2mel_mm2_svimASM">${polarizing}/filter.txt
-bcftools filter -i 'GT[@filter.txt]="hom"' ${polarizing}/all2sim.asm.collapsed.vcf.gz |\
+#bcftools filter -i 'GT[@filter.txt]="hom"' ${polarizing}/all2sim.asm.collapsed.vcf.gz |\
+#bcftools sort -O z >  ${polarizing}/all2sim.asm.onlysim.vcf.gz
+#bcftools index -t -f ${polarizing}/all2sim.asm.onlysim.vcf.gz
+# --> 601 SVs
+bcftools filter --threads ${nT} -i 'GT[@filter.txt]="hom"' ${polarizing}/allandsim.asm.truvari.vcf.gz |\
+bcftools view --threads ${nT} -i 'NumCollapsed >= 1'|\
 bcftools sort -O z >  ${polarizing}/all2sim.asm.onlysim.vcf.gz
 bcftools index -t -f ${polarizing}/all2sim.asm.onlysim.vcf.gz
-# --> 601 SVs
+# --> 834 SVs
+#bcftools query -f '%CHROM %POS % \n' {polarizing}/all2sim.asm.onlysim.vcf.gz
+
 
 ###Second way to extract overlapping SVs
 bcftools isec --threads ${nT} -c none --regions-overlap pos --nfiles=2 -O z \
@@ -144,13 +153,34 @@ bcftools filter -i 'GT[@filter.txt]="hom"' ${polarizing}/allandsim.asm.SURVIVOR.
 #-p /dfs7/jje/jenyuw/SV-project-temp/result/polarizing/temp \
 #${merged_SVs}/truvari.svimASM.vcf.gz ${polarizing}/all2sim.asm.onlysim.vcf.gz
 #this yeiled no overlapping SVs
+
+: << 'SKIP'
+##
+##This strategy is not good because there are overlapping names, which causes many many false positives
+##
 $bcftools query -f '%ID\n' ${polarizing}/all2sim.asm.onlysim.vcf.gz >${polarizing}/onlysim.id
-cat ${polarizing}/onlysim.id |while read line
-do
-grep -E "${line}" ${merged_SVs}/truvari.svimASM.vcf |\
-sed s@'\.\/\.'@'hahaha'@g |sed s@'1\/1'@'\.\/\.'@g|sed s@'hahaha'@'1\/1'@g >>${polarizing}/reversed.txt
-grep -v "${line}" ${merged_SVs}/truvari.svimASM.vcf >>${polarizing}/nochange.txt
-done
+#cat ${polarizing}/onlysim.id |while read line
+#do
+#grep -E "${line}" ${merged_SVs}/truvari.svimASM.vcf |\
+#sed s@'\.\/\.'@'hahaha'@g |sed s@'1\/1'@'\.\/\.'@g|sed s@'hahaha'@'1\/1'@g >>${polarizing}/reversed.txt
+#done
+#cat ${polarizing}/reversed.txt|sort|uniq >${polarizing}/reversed.uniq.txt
+
 grep "#" ${merged_SVs}/truvari.svimASM.vcf >${polarizing}/header.txt
-cat ${polarizing}/header.txt ${polarizing}/nochange.txt ${polarizing}/reversed.txt >${polarizing}/polarized.vcf
-bcftools sort --max-mem 2G ${polarizing}/polarized.vcf.gz -O z -o polarized.sort.vcf.gz
+#cat  ${polarizing}/header.txt ${polarizing}/reversed.uniq.txt |bgzip -@ ${nT} -c |bcftools sort -O z -o - >${polarizing}/reversed.vcf.gz
+#bcftools index -f -t ${polarizing}/reversed.vcf.gz
+bedtools intersect -header  -a ${merged_SVs}/truvari.svimASM.vcf.gz -b ${polarizing}/reversed.vcf.gz |\
+bgzip -@ ${nT} -c |bcftools sort -O z -o ->${polarizing}/nochange.vcf.gz
+bcftools index -f -t ${polarizing}/nochange.vcf.gz
+bcftools concat --threads ${nT} -a -O z ${polarizing}/nochange.vcf.gz ${polarizing}/reversed.vcf.gz |\
+bcftools sort --max-mem 2G -O z -o polarized.asm.sort.vcf.gz
+bgzip -@ ${nT} -d -k polarized.asm.sort.vcf.gz
+SKIP
+
+bedtools subtract -A -header -a ${merged_SVs}/truvari.svimASM.vcf.gz -b ${polarizing}/all2sim.asm.onlysim.vcf.gz |\
+bcftools sort -O v -o ${polarizing}/nochange.vcf
+
+bedtools subtract -A -a ${merged_SVs}/truvari.svimASM.vcf.gz -b ${polarizing}/nochange.vcf.gz|\
+sed s@'\.\/\.'@'hahaha'@g |sed s@'1\/1'@'\.\/\.'@g|sed s@'hahaha'@'1\/1'@g >${polarizing}/reversed.txt
+
+cat ${polarizing}/nochange.vcf ${polarizing}/reversed.txt |bcftools sort --max-mem 2G -O z -o ${polarizing}/polarized.asm.vcf.gz

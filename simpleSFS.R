@@ -3,15 +3,16 @@ library("tidyverse")
 library("dplyr")
 
 setwd("/Users/Oscar/Desktop/Emerson_Lab_Work/SV-project")
-t1=read.table("extraction2.tsv",header=FALSE)
+t1=read.table("extraction.polarized.asm.tsv",header=FALSE)
 #colnames(t1) <- c("CHROM","POS", "SVTYPE","SVLEN", S[1:55])
 #t1=t1 %>% mutate(V5 = str_replace(V5, './.', '0'))
 #t1 %>%  mutate(conf = recode(conf, 'East' = 'E', 'West' = 'W', 'North' = 'N'))
+nc=ncol(t1)
 t1=t1 %>%mutate(across(V5:V65, ~ recode(.x, './.' = "0", '0/1' = "1", '1/0' = "1", '1/1' = "1")))
 t1$V66 <- apply(t1, 1, function(x) length(which(x==1)))
 levels(as.factor(t1$V3))
 
-##polarizing failed. so we keep going on
+
 tdel = t1 %>% filter(V3=="DEL") %>% select(V1,V2,V3,V4,V66) 
 sfsdel=as.data.frame(table(tdel$V66))
 colnames(sfsdel)<-c("frequency","occurrence")
@@ -49,9 +50,17 @@ sfs.bnd$percentage=(sfs.bnd$occurrence*100/nrow(t.bnd))
 sfs.bnd$type="BND"
 
 
-sfs.all=bind_rows(sfsdel,sfs.ins,sfs.dup,sfs.inv,sfs.bnd)
-
+#sfs.all=bind_rows(sfsdel,sfs.ins,sfs.dup,sfs.inv,sfs.bnd)
+sfs.all=bind_rows(sfsdel,sfs.ins,sfs.inv)
 pall <- ggplot(sfs.all, aes(x=frequency, y=percentage, fill=type)) + 
   geom_bar(stat = "identity",position="dodge") +
   ggtitle("all, %")+ scale_color_grey() + theme_classic()
 pall
+
+sfs.rare=bind_rows(sfsdel,sfs.dup,sfs.inv,sfs.bnd)
+p.rare <- ggplot(sfs.rare, aes(x=frequency, y=percentage, fill=type)) + 
+  geom_bar(stat = "identity",position="dodge") +
+  ggtitle("all, %")+ scale_color_grey() + theme_classic()
+p.rare
+
+
