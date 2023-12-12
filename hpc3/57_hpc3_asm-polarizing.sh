@@ -26,6 +26,9 @@ samtools view -@ ${nT} -h --reference ${dmel_ref} - |samtools sort -@ ${nT} -O b
 samtools index -@ ${nT} ${polarizing}/corrected.mumm4.bam
 
 #nucmer -t ${nT} --maxmatch --delta=${polarizing}/mumm4.delta ${dmel_ref} ${dsim_ref}
+#conda activate sv-calling
+#lastz ${dmel_ref}[multiple] ${dsim_ref}[multiple] --chain --format=general:name1,strand1,start1,end1,name2,strand2,start2,end2 > lastz_out.txt
+#conda deactivate
 #svmu ${polarizing}/mumm4.delta ${dmel_ref} ${dsim_ref} l sam_lastz.txt svmu > svmu.tsv
 #Does not work well
 
