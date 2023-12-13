@@ -45,8 +45,8 @@ module unload python/3.10.2
 
 #bcftools +fixref ${con_SVs}/A1_CLR.tru_con.sort.vcf.gz -- -f ${ref_genome}
 #bcftools norm --check-ref e -f ${ref_genome} ${con_SVs}/A1_CLR.tru_con.sort.vcf.gz -O v -o /dev/null
-bcftools +fixref ${con_SVs}/${name}.tru_con.sort.vcf.gz -O z -o ${con_SVs}/${name}.tru_con.fix.vcf.gz -- -f ${ref_genome} -m top
-bcftools index -f -t ${con_SVs}/${name}.tru_con.fix.vcf.gz
+#bcftools +fixref ${con_SVs}/${name}.tru_con.sort.vcf.gz -O z -o ${con_SVs}/${name}.tru_con.fix.vcf.gz -- -f ${ref_genome} -m top
+#bcftools index -f -t ${con_SVs}/${name}.tru_con.fix.vcf.gz
 #truvari collapse -r 500 -p 0.95 -P 0.95 -s 50 -S 100000 #A draft human pangenome reference
 
 echo " This is the end!"

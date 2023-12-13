@@ -6,7 +6,8 @@
 ## vcftools --TajimaD Expected at least 2 parts in FORMAT entry: ID=DR,Number=2,Type=Integer
 
 ##global settings
-setwd("/Users/Oscar/Desktop/plotting/SV-stats")
+#setwd("/Users/Oscar/Desktop/plotting/SV-stats")
+setwd("/Users/Oscar/Desktop/Emerson_Lab_Work/SV-project")
 ##packages
 library("tidyverse")
 library(devtools)
@@ -62,10 +63,10 @@ variance.d <- function(n,S) {
 vcf <- read.vcf("truvari.svimASM.rn.vcf", header=TRUE, stringsAsFactors=FALSE)
 ## if the quality score is ".", this function will report error.
 ## sed s@"\t.\tPASS"@"\t10\tPASS"@g truvari.svimASM.vcf >truvari.svimASM.rn.vcf
-snp.vcf <- read.vcf("all.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
-snp.outside.vcf <- read.vcf("all.outside-1000.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
-syn.snp.vcf <- read.vcf("all.synSNPs.vcf", header=TRUE, stringsAsFactors=FALSE)
-bed <- read.table("pure-outside.bed", header = FALSE)
+#snp.vcf <- read.vcf("all.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
+snp.outside.vcf <- read.vcf("syn.outside-1000-svimasm.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
+syn.snp.vcf <- read.vcf("synSNPs.vcf", header=TRUE, stringsAsFactors=FALSE)
+bed <- read.table("pure-outside-svimasm.bed", header = FALSE)
 ##variables
 win.size=1000000
 syn.win.size=1000
@@ -128,7 +129,7 @@ for (chr in total_chr){
 
 for (chr in total_chr){
     #print(chr)
-    vcf.part = snp.vcf %>% filter(CHROM == chr) #calculate the window first 
+    vcf.part = syn.snp.vcf %>% filter(CHROM == chr) #calculate the window first 
     my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=syn.win.size)
     #print(my.win)
     my.results=data.frame(mut.type="SNP", SV.type="all.syn.SNP", Chromosome=chr, Start=my.win, End=(my.win+syn.win.size), Count=rep(0, length(my.win)))
@@ -311,8 +312,8 @@ p6 <-ggplot(data= container)
 p6 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW, color=Chromosome))
 
 
-#write.csv(container, file="container.0516.csv")
-container=read.csv("container.0516.csv")
+#write.csv(container, file="container.1212.csv")
+container=read.csv("container.1212.csv")
 a = container %>% filter(SV.type=="DEL")
 sum(a$Count)
 summary(a$ThetaW.persite)
