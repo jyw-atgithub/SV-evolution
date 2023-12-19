@@ -141,3 +141,8 @@ deactivate
 
 #SBATCH --tmp=100G                ## requesting 100 GB local scratch
 #SBATCH --constraint=fastscratch  ## requesting nodes with fast scratch in /tmp
+
+##Download a file from google drive
+FILEID="1p2lEmTZazE7vysai7PUXz0kKBQpv1Idb"
+FILENAME=""
+wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=FILEID' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=$FILEID" -O $FILENAME && rm -rf /tmp/cookies.txt

@@ -54,8 +54,8 @@ seed_cutoff = 0
 sort_options = -m 40g -t 4 #m=M/(TOTAL_INPUT_BASES * 1.2/4)
 minimap2_options_raw = -t 4
 pa_correction = 3 #M/(TOTAL_INPUT_BASES * 1.2/4)
-correction_options = -p 4 #P cores, P/parallel_jobs
-
+correction_options = -p 4 -max_lq_length 10k #P cores
+#correction_options = -p 4 -max_lq_length 10k #to extend the primary contigs
 [assemble_option]
 minimap2_options_cns = -t 4 -k17 -w17
 minimap2_options_map = -t 4 #P cores, P/parallel_jobs
