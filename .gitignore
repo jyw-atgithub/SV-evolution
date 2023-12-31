@@ -1,3 +1,6 @@
 *.RData 
 *.Rhistory
 *.tsv
+*.csv
+*.png
+*.pdf
