@@ -31,38 +31,26 @@ bash /pub/jenyuw/Software/MUMandCo-MUMandCov3.8/mumandco_v3.8.sh  \
 
 cd ${SVs}/${name}_mumco_output
 
-cat ${name}_mumco.SVs_all.vcf|tr '\n' '\f' |\
-sed -e 's/\f##contig/>\f##contig/g;s/\f##query=/>\f##query=/;s/.fasta>/.fasta/' |\
-sed -e 's/\f##query_contig/>\f##query_contig/g;s/\f##INFO=<ID=END/>\f##INFO=<ID=END/;s/.fasta>/.fasta/' |\
-tr '\f' '\n' |\
-sed 's/ type=.*.;,/,/g' |grep "#" |grep -v "##ALT" >header.pre
+cat ${SVs}/${name}_mumco_output/${name}_mumco.SVs_all.vcf|grep "#" |\
+#tr '\n' '\f' |\
+##'\f' is a special character that dpes not exist in the file, so it is used as a temporary separator
+#sed -e 's/\f##contig/>\f##contig/g;s/\f##query=/>\f##query=/;s/.fasta>/.fasta/' |\
+#sed -e 's/\f##query_contig/>\f##query_contig/g;s/\f##INFO=<ID=END/>\f##INFO=<ID=END/;s/.fasta>/.fasta/' |\
+#tr '\f' '\n' |\
+grep -v "##query_contig" |sed 's/ type=.*.;,/,/g' |tr -d " "|\
+sed 's/qCHR/Q_CHROM/g; s/qSTART/Q_START/g; s/qEND/Q_END/g' |\
+sed -E "s@##ALT=<ID=CONTR,Description=Contraction>\n@@g" |\
+sed 's@ALT=<ID=DUP:TANDEM,Description=Tandem Duplication>@ALT=<ID=DUP,Description=Duplication>@g' >${SVs}/${name}_mumco_output/header.pre
 
 ## making VCF
-printf "" >container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="insertion_mobile") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" "." "\t" $9 "\t" "." "\t" "PASS" "\t" "SVTYPE=INS" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} ' >>container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="insertion_novel") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" "." "\t" $9 "\t" "." "\t" "PASS" "\t" "SVTYPE=INS" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} '>>container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="deletion_mobile") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" $9 "\t" "." "\t" "." "\t" "PASS" "\t" "SVTYPE=DEL" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} '>>container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="deletion_novel") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" $9 "\t" "." "\t" "." "\t" "PASS" "\t" "SVTYPE=DEL" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} '>>container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="duplication") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" $9 "\t" "." "\t" "." "\t" "PASS" "\t" "SVTYPE=DUP" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} '>>container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="inversion") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" $9 "\t" "." "\t" "." "\t" "PASS" "\t" "SVTYPE=INV" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} '>>container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="transloc") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" $9 "\t" "." "\t" "." "\t" "PASS" "\t" "SVTYPE=TRA" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} '>>container.pre &&\
-cat ${name}_mumco.SVs_all.withfragment.tsv |\
-gawk ' (NR>1) && ($6=="contraction") {print $1 "\t" $3 "\t"$6"-"$5"-"$7 "\t" $9 "\t" "." "\t" "." "\t" "PASS" "\t" "SVTYPE=DEL" ";SVLEN=" $5 ";qCHR=" $2 ";qSTART=" $7 ";qEND=" $8 "\t" "GT" "\t" "1/1"} '>>container.pre
+grep -v "#" ${SVs}/${name}_mumco_output/${name}_mumco.SVs_all.vcf |\
+sed 's/CONTR/DEL/g; s/qCHR/Q_CHROM/g; s/qSTART/Q_START/g; s/qEND/Q_END/g'|\
+gawk '{print $1 "\t" $2 "\t" $1"_"$2 "\t" $4 "\t" $5 "\t" $6 "\t" $7 "\t" $8 "\t" $9 "\t" $10 }' >${SVs}/${name}_mumco_output/container.pre
 #contractions are treated as deletions!
 
+cat ${SVs}/${name}_mumco_output/header.pre ${SVs}/${name}_mumco_output/container.pre >${SVs}/${name}_mumco_output/${name}_mumco.good.vcf
+bgzip -@ ${nT} -f -k ${SVs}/${name}_mumco_output/${name}_mumco.good.vcf
+bcftools sort -O z ${SVs}/${name}_mumco_output/${name}_mumco.good.vcf.gz >${SVs}/${name}_mumco.good.sort.vcf.gz
+bcftools index -t -f ${SVs}/${name}_mumco.good.sort.vcf.gz
 
-cat header.pre container.pre >${name}_mumco.good.vcf
-bgzip -@ ${nT} -k ${name}_mumco.good.vcf
-bcftools sort -O z ${name}_mumco.good.vcf.gz >${name}_mumco.good.sort.vcf.gz
-bcftools index -t -f ${name}_mumco.good.sort.vcf.gz
-
-#cat A4_CLR.SVs_all.withfragment.tsv |gawk ' NR>1 {print $6} '|sort -h|uniq -c|less -S
-echo "We will have a good vcf!!"
 echo "This is the end!!"
