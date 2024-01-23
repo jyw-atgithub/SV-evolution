@@ -39,8 +39,21 @@ cat ${SVs}/${name}_mumco_output/${name}_mumco.SVs_all.vcf|grep "#" |\
 #tr '\f' '\n' |\
 grep -v "##query_contig" |sed 's/ type=.*.;,/,/g' |tr -d " "|\
 sed 's/qCHR/Q_CHROM/g; s/qSTART/Q_START/g; s/qEND/Q_END/g' |\
+#grep -v -E "##INFO|##ALT|##FORMAT"|
+sed 's/##INFO=<ID=END,Number=1,Type=Integer,Description=Endpositioninthereferencegenome>/##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">/g' |\
+sed 's/##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=DifferenceinlengthbetweenREFandALTalleles>/##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">/g' |\
+sed 's/##INFO=<ID=SVTYPE,Number=1,Type=String,Description=Typeofstructuralvariant>/##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">/g' |\
+sed 's/##INFO=<ID=Q_CHROM,Number=1,Type=String,Description=Chromosomeinquerygenome>/##INFO=<ID=Q_CHROM,Number=1,Type=String,Description=Chromosome in query genome>/g' |\
+sed 's/##INFO=<ID=Q_START,Number=1,Type=Integer,Description=Startpositioninquerygenome>/##INFO=<ID=Q_START,Number=1,Type=Integer,Description="Start position in query genome">/g' |\
+sed 's/##INFO=<ID=Q_END,Number=1,Type=Integer,Description=Endpositioninquerygenome>/##INFO=<ID=Q_END,Number=1,Type=Integer,Description="End position in query genome">/g' |\
 sed -E "s@##ALT=<ID=CONTR,Description=Contraction>\n@@g" |\
-sed 's@ALT=<ID=DUP:TANDEM,Description=Tandem Duplication>@ALT=<ID=DUP,Description=Duplication>@g' >${SVs}/${name}_mumco_output/header.pre
+sed 's/##ALT=<ID=DUP:TANDEM,Description=TandemDuplication>/##ALT=<ID=DUP,Description="Duplication">/g' |\
+sed 's/##ALT=<ID=DEL,Description=Deletion>/##ALT=<ID=DEL,Description="Deletion">/g' |\
+sed 's/##ALT=<ID=INS,Description=Insertionofnovelsequence>/##ALT=<ID=INS,Description="Insertion of novel sequence">/g' |\
+sed 's/##ALT=<ID=INV,Description=Inversion>/##ALT=<ID=INV,Description="Inversion">/g' |\
+sed 's/##ALT=<ID=TRA,Description=Regioninvolvedintranslocationalternativetoabreakendposition>/##ALT=<ID=TRA,Description="Breakend">/g' \
+>${SVs}/${name}_mumco_output/header.pre
+
 
 ## making VCF
 grep -v "#" ${SVs}/${name}_mumco_output/${name}_mumco.SVs_all.vcf |\
@@ -50,7 +63,7 @@ gawk '{print $1 "\t" $2 "\t" $1"_"$2 "\t" $4 "\t" $5 "\t" $6 "\t" $7 "\t" $8 "\t
 
 cat ${SVs}/${name}_mumco_output/header.pre ${SVs}/${name}_mumco_output/container.pre >${SVs}/${name}_mumco_output/${name}_mumco.good.vcf
 bgzip -@ ${nT} -f -k ${SVs}/${name}_mumco_output/${name}_mumco.good.vcf
-bcftools sort -O z ${SVs}/${name}_mumco_output/${name}_mumco.good.vcf.gz >${SVs}/${name}_mumco.good.sort.vcf.gz
-bcftools index -t -f ${SVs}/${name}_mumco.good.sort.vcf.gz
+bcftools sort -O z ${SVs}/${name}_mumco_output/${name}_mumco.good.vcf.gz >${SVs}/${name}.mumco.good.sort.vcf.gz
+bcftools index -t -f ${SVs}/${name}.mumco.good.sort.vcf.gz
 
 echo "This is the end!!"
