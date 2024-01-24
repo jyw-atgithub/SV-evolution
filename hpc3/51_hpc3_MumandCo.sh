@@ -46,7 +46,7 @@ sed 's/##INFO=<ID=SVTYPE,Number=1,Type=String,Description=Typeofstructuralvarian
 sed 's/##INFO=<ID=Q_CHROM,Number=1,Type=String,Description=Chromosomeinquerygenome>/##INFO=<ID=Q_CHROM,Number=1,Type=String,Description=Chromosome in query genome>/g' |\
 sed 's/##INFO=<ID=Q_START,Number=1,Type=Integer,Description=Startpositioninquerygenome>/##INFO=<ID=Q_START,Number=1,Type=Integer,Description="Start position in query genome">/g' |\
 sed 's/##INFO=<ID=Q_END,Number=1,Type=Integer,Description=Endpositioninquerygenome>/##INFO=<ID=Q_END,Number=1,Type=Integer,Description="End position in query genome">/g' |\
-sed -E "s@##ALT=<ID=CONTR,Description=Contraction>\n@@g" |\
+sed -E "s/##ALT=<ID=CONTR,Description=Contraction>\n//g" |\
 sed 's/##ALT=<ID=DUP:TANDEM,Description=TandemDuplication>/##ALT=<ID=DUP,Description="Duplication">/g' |\
 sed 's/##ALT=<ID=DEL,Description=Deletion>/##ALT=<ID=DEL,Description="Deletion">/g' |\
 sed 's/##ALT=<ID=INS,Description=Insertionofnovelsequence>/##ALT=<ID=INS,Description="Insertion of novel sequence">/g' |\

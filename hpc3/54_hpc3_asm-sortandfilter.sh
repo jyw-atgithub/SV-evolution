@@ -22,7 +22,8 @@ file=`head -n $SLURM_ARRAY_TASK_ID ${scaffold}/scfd_list.txt |tail -n 1`
 name=$(echo ${file} | cut -d '/' -f 8)
 echo "the name is ${name}"
 
-
+#####The following sed commands contains literally tab, so copy and paste will not work. Edit it in nano manually.########
+#####Truvari requires the quality score to be an integer and it can not be only "."########
 for i in ${SVs}/${name}.svimASM.vcf 
 do
 bgzip -f --keep -@ ${nT} ${i}
@@ -30,6 +31,7 @@ bcftools sort --write-index --max-mem 4G -O z -o ${i}.sort.gz ${i}.gz
 bcftools view --threads ${nT} -r 2L,2R,3L,3R,4,X,Y \
 -i 'FILTER = "PASS"' -O v -o - ${i}.sort.gz |\
 sed 's/DUP_TANDEM/DUP/g; s/DUP:TANDEM/DUP/g; s/DUP_INT/DUP/g; s/DUP:INT/DUP/g; s/BND/TRA/g' |\
+sed 's/ .       PASS/   30      PASS/g' |\
 bcftools view --threads ${nT} -O z -o ${SVs}/${name}.svimASM.filtered.vcf.gz
 bgzip -f -dk ${SVs}/${name}.svimASM.filtered.vcf.gz
 rm ${i}.sort.gz
@@ -41,6 +43,7 @@ do
 bcftools view --threads ${nT} -r 2L,2R,3L,3R,4,X,Y \
 -i 'FILTER = "PASS"' -O v -o - ${i} |\
 sed 's/DUP_TANDEM/DUP/g; s/DUP:TANDEM/DUP/g; s/DUP_INT/DUP/g; s/DUP:INT/DUP/g; s/BND/TRA/g' |\
+sed 's/ .       PASS/   30      PASS/g' |\
 bcftools view --threads ${nT} -O z -o ${SVs}/${name}.mumco.filtered.vcf.gz
 bgzip -f -dk ${SVs}/${name}.mumco.filtered.vcf.gz
 done
