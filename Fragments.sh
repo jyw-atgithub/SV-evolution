@@ -1,6 +1,5 @@
 ## Fragments
 
-
 srun -A jje_lab -c 4 --pty --x11 bash -i
 cd /pub/jenyuw/
 
@@ -8,6 +7,14 @@ srun -A jje_lab -p highmem -c 32 --tmp=100G --pty --x11 bash -i
 
 sbank balance statement -a jje_lab
 sbank balance statement -u jenyuw
+
+##USING Truvari on THOTH
+#python3 -m venv truvari_env
+source /home/jenyuw/truvari_env/bin/activate
+#python3 -m pip freeze | less -S #  ensuring there is nothing installed
+#python3 -m pip install truvari
+truvari -h 
+deactivate
 
 
 : <<'SKIP'
