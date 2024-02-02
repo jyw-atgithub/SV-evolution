@@ -31,6 +31,6 @@ echo "the name is ${name}"
 conda activate ragtag
 
 ragtag.py scaffold -r -w --aligner 'nucmer' -o ${scaffold}/${name} ${ref_genome} ${file}
-##Nnucmer canNOT be multithreaded.
+##Nnucmer canNOT be multithreaded if using the Ragtag conda environment.
 conda deactivate
 
