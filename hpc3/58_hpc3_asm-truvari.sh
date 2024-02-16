@@ -4,7 +4,7 @@
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p highmem       ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=8   ## number of cores the job needs-x map-ont
+#SBATCH --cpus-per-task=10   ## number of cores the job needs-x map-ont
 #SBATCH --mem-per-cpu=10G     # requesting memory per CPUe. 
 source ~/.bashrc
 
@@ -19,10 +19,10 @@ bcftools sort --max-mem 4G -O z -o - > ${merged_SVs}/merge.asm-2.sort.vcf.gz
 bcftools index -f -t ${merged_SVs}/merge.asm-2.sort.vcf.gz
 
 module load python/3.10.2
-
-truvari collapse --sizemax 200000000 -k common \
+##Do not use "-f" in truvari collapse, because this is an old function and less accurate
+truvari collapse --sizemax 5000000 -k common \
 -i ${merged_SVs}/merge.asm-2.sort.vcf.gz \
--c ${merged_SVs}/truvari.asm-2.collapse.vcf.gz -f ${ref_genome} |\
+-c ${merged_SVs}/truvari.asm-2.collapse.vcf.gz |\
 bcftools sort --max-mem 4G |\
 bgzip -@ ${nT} > ${merged_SVs}/truvari.asm-2.vcf.gz
 

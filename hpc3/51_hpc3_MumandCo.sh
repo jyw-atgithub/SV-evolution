@@ -4,7 +4,7 @@
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p standard       ## partition/queue name
 #SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=10   ## number of cores the job needs-x map-ont
+#SBATCH --cpus-per-task=12   ## number of cores the job needs-x map-ont
 #SBATCH --mem-per-cpu=6G     # requesting memory per CPU
 #SBATCH --tmp=100G                ## requesting 100 GB local scratch
 #SBATCH --constraint=fastscratch  ## requesting nodes with fast scratch in /tmp
@@ -12,20 +12,22 @@
 source ~/.bashrc
 
 ref_genome="/dfs7/jje/jenyuw/SV-project-temp/reference/dmel-all-chromosome-r6.49.fasta"
+trimmed="/dfs7/jje/jenyuw/SV-project-temp/result/trimmed"
 SVs="/dfs7/jje/jenyuw/SV-project-temp/result/SVs"
-assemble="/dfs7/jje/jenyuw/SV-project-temp/result/assemble"
-scaffold="/dfs7/jje/jenyuw/SV-project-temp/result/scaffold"
+purge_dups="/dfs7/jje/jenyuw/SV-project-temp/result/purge_dups"
 nT=$SLURM_CPUS_PER_TASK
 
-file=`head -n $SLURM_ARRAY_TASK_ID ${scaffold}/scfd_list.txt |tail -n 1`
-name=$(echo ${file} | cut -d '/' -f 8)
+file=`head -n $SLURM_ARRAY_TASK_ID ${trimmed}/namelist.txt |tail -n 1`
+name=$(basename ${file}|sed s/".trimmed.fastq.gz"//g)
+read_type=`echo ${name} | gawk -F "_" '{print $2}'`
 echo "the file is ${file}"
 echo "the name is ${name}"
 
 cd ${SVs}
 
+## use assembly as query
 bash /pub/jenyuw/Software/MUMandCo-MUMandCov3.8/mumandco_v3.8.sh  \
--r ${ref_genome} -q ${scaffold}/${name}/ragtag.scaffold.fasta \
+-r ${ref_genome} -q ${purge_dups}/${name}.final.fasta \
 -g 135000000 -o ${name}_mumco -t ${nT} -ml 50
 # Do not use -b
 
@@ -53,7 +55,6 @@ sed 's/##ALT=<ID=INS,Description=Insertionofnovelsequence>/##ALT=<ID=INS,Descrip
 sed 's/##ALT=<ID=INV,Description=Inversion>/##ALT=<ID=INV,Description="Inversion">/g' |\
 sed 's/##ALT=<ID=TRA,Description=Regioninvolvedintranslocationalternativetoabreakendposition>/##ALT=<ID=TRA,Description="Breakend">/g' \
 >${SVs}/${name}_mumco_output/header.pre
-
 
 ## making VCF
 grep -v "#" ${SVs}/${name}_mumco_output/${name}_mumco.SVs_all.vcf |\
