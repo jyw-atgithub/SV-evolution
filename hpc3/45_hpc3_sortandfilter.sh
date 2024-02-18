@@ -26,7 +26,7 @@ bcftools sort --write-index --max-mem 2G -O z -o ${SVs}/${name}.${prog}.sort.vcf
 #tabix -f -p vcf ${SVs}/${name}.${prog}.sort.vcf.gz #no need, because "bcftools sort --write-index" generate .csi index
 
 bcftools view --threads ${nT} -r 2L,2R,3L,3R,4,X,Y \
--i 'QUAL >= 10 && FILTER = "PASS"'  -O v -o - ${SVs}/${name}.${prog}.sort.vcf.gz |\
+-i 'QUAL >= 20 && FILTER = "PASS"'  -O v -o - ${SVs}/${name}.${prog}.sort.vcf.gz |\
 sed 's/DUP_TANDEM/DUP/g; s/DUP:TANDEM/DUP/g; s/DUP_INT/DUP/g; s/DUP:INT/DUP/g' |\
 bcftools view --threads ${nT} -O v -o ${SVs}/${name}.${prog}.filtered.vcf
 #bgzip -f -dk ${SVs}/${name}.${prog}.filtered.vcf.gz
