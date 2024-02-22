@@ -123,5 +123,11 @@ bcftools sort -O v -o ${polarizing}/nochange.vcf
 bedtools subtract -A -a ${merged_SVs}/truvari.asm-2.vcf.gz -b ${polarizing}/nochange.vcf |\
 sed s@'\.\/\.'@'hahaha'@g |sed s@'1\/1'@'\.\/\.'@g|sed s@'hahaha'@'1\/1'@g >${polarizing}/reversed.txt
 
-cat ${polarizing}/nochange.vcf ${polarizing}/reversed.txt |bcftools sort --max-mem 2G -O z -o ${polarizing}/polarized.asm.vcf.gz
+##################################################
+#####Important!!! Drrmove the duplicated SVs######
+##################################################
+cat ${polarizing}/nochange.vcf ${polarizing}/reversed.txt |bcftools sort --max-mem 2G -O v|uniq|\
+bgzip -@ ${nT} -c > ${polarizing}/polarized.asm.vcf.gz
 bcftools index -f -t ${polarizing}/polarized.asm.vcf.gz
+# --> zcat ${polarizing}/polarized.asm.vcf.gz |grep -v "#"|wc -l
+# --> 80995

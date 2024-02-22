@@ -21,12 +21,8 @@ read_type=`echo ${name} | gawk -F "_" '{print $2}'`
 declare -A mapping_option=(["CLR"]='map-pb' ["hifi"]='asm20' ["ONT"]='map-ont')
 echo "The mapping option is ${mapping_option[$read_type]}"
 
-module load samtools/1.15.1
-
 minimap2 -t ${nT} -a -x ${mapping_option[$read_type]} \
 ${ref_genome} ${file} |\
 samtools view -b -h -@ ${nT} -o - |\
 samtools sort -@ ${nT} -o ${aligned_bam}/${name}.trimmed-ref.sort.bam
 samtools index -@ ${nT} ${aligned_bam}/${name}.trimmed-ref.sort.bam
-
-module unload samtools/1.15.1

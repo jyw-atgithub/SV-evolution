@@ -18,9 +18,38 @@ source ~/.bashrc
 cp ${dmel_ref} ${TE}/dmel-r6.49.fasta
 cd ${TE}
 
+####### Avoid use the DROSOPHILA TRANSPOSON CANONICAL SEQUENCES #######
+####### It does not involve Helitron #######
+#module load singularity/3.11.3
+#singularity exec -B ${TE} /pub/jenyuw/Software/dfam-tetools-latest.sif RepeatMasker -gff -s -xsmall \
+#-lib "${TE}/D_mel_transposon_sequence_set.fa"  -dir ${TE}/dmel-r649 \
+#${TE}/dmel-r6.49.fasta
+
 module load singularity/3.11.3
-singularity exec -B ${TE} /pub/jenyuw/Software/dfam-tetools-latest.sif RepeatMasker -gff -s -xsmall \
--lib "${TE}/D_mel_transposon_sequence_set.fa"  -dir ${TE}/dmel-r649 \
+singularity exec -B ${TE} \
+-B /dfs7/jje/jenyuw/SV-project-temp/raw/Libraries:/opt/RepeatMasker/Libraries \
+/pub/jenyuw/Software/dfam-tetools-latest.sif \
+RepeatMasker -gff -s -xsmall \
+-species "drosophila melanogaster" -dir ${TE}/dmel-r649-dfam \
 ${TE}/dmel-r6.49.fasta
 
-#-species "drosophila"
+##The process of building a custom library
+##REF: https://github.com/Dfam-consortium/TETools
+: <<'SKIP'
+singularity run -B /dfs7/jje/jenyuw/SV-project-temp/raw /pub/jenyuw/Software/dfam-tetools-latest.sif
+cp -r /opt/RepeatMasker/Libraries/ ./
+exit
+chown -R $USER ./Libraries/
+
+cd /dfs7/jje/jenyuw/SV-project-temp/raw
+wget https://www.dfam.org/releases/Dfam_3.8/families/FamDB/dfam38_full.4.h5.gz
+unpigz -k -p 6 dfam38_full.4.h5.gz
+mv dfam38_full.4.h5 ./Libraries/famdb/
+
+singularity run -B /dfs7/jje/jenyuw/SV-project-temp/raw/Libraries:/opt/RepeatMasker/Libraries \
+/pub/jenyuw/Software/dfam-tetools-latest.sif
+cd /opt/RepeatMasker/
+rm ./Libraries/famdb/rmlib.config
+./tetoolsDfamUpdate.pl
+exit
+SKIP
