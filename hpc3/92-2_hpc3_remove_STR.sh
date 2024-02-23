@@ -55,7 +55,7 @@ bcftools view --threads ${nT} -i 'NumCollapsed >= 1'|\
 bcftools sort -O z >  ${polarizing}/all2sim.asm.noSTR.onlysim.vcf.gz
 bcftools index -t -f ${polarizing}/all2sim.asm.noSTR.onlysim.vcf.gz
 # --> zcat ${polarizing}/all2sim.asm.noSTR.onlysim.vcf.gz |grep -v "#"|wc -l
-# --> ????
+# --> 2611
 
 bedtools subtract -A -header -a ${merged_SVs}/truvari.asm-2.noSTR.vcf.gz -b ${polarizing}/all2sim.asm.noSTR.onlysim.vcf.gz |\
 bcftools sort -O v -o ${polarizing}/nochange.noSTR.vcf
@@ -69,5 +69,6 @@ sed s@'\.\/\.'@'hahaha'@g |sed s@'1\/1'@'\.\/\.'@g|sed s@'hahaha'@'1\/1'@g >${po
 cat ${polarizing}/nochange.noSTR.vcf ${polarizing}/reversed.noSTR.txt |bcftools sort --max-mem 2G -O v|uniq|\
 bgzip -@ ${nT} -c > ${polarizing}/polarized.asm.noSTR.vcf.gz
 bcftools index -f -t ${polarizing}/polarized.asm.noSTR.vcf.gz
-
+# --> zcat ${polarizing}/polarized.asm.noSTR.vcf.gz |grep -v "#"|wc -l
+# -->79474
 echo "This is the end!!"

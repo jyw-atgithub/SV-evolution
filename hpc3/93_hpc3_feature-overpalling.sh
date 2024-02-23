@@ -16,7 +16,7 @@ source ~/.bashrc
 nT=$SLURM_CPUS_PER_TASK
 
 #transform vcf to bed format
-bcftools query -f '%CHROM\t%POS0\t%END\t%ID\n' ${polarizing}/polarized.asm.vcf.gz >${org_SV}/polarized.asm.bed
+#bcftools query -f '%CHROM\t%POS0\t%END\t%ID\n' ${polarizing}/polarized.asm.vcf.gz >${org_SV}/polarized.asm.bed
 
 bedtools intersect -header -a ${polarizing}/polarized.asm.vcf.gz -b ${TE}/dmel-r649/dmel-r6.49.fasta.out.gff |\
 tee >(bcftools view -i 'SVTYPE="DEL"' -O z >${org_SV}/DEL.TE-overlap.asm.vcf.gz) |\
