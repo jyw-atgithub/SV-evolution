@@ -64,7 +64,7 @@ bedtools subtract -A -a ${merged_SVs}/truvari.asm-2.noSTR.vcf.gz -b ${polarizing
 sed s@'\.\/\.'@'hahaha'@g |sed s@'1\/1'@'\.\/\.'@g|sed s@'hahaha'@'1\/1'@g >${polarizing}/reversed.noSTR.txt
 
 ##################################################
-#####Important!!! Drrmove the duplicated SVs######
+#####Important!!! Rmove the duplicated SVs######
 ##################################################
 cat ${polarizing}/nochange.noSTR.vcf ${polarizing}/reversed.noSTR.txt |bcftools sort --max-mem 2G -O v|uniq|\
 bgzip -@ ${nT} -c > ${polarizing}/polarized.asm.noSTR.vcf.gz

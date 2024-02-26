@@ -36,24 +36,22 @@ SKIP
 
 #If use "--fasta-ref $ref_genome", "bcftools norm" will fail
 ###There are many repeated IDs of SVs representiting different alleles, so we have to rename the IDs
-bcftools annotate --set-id '%CHROM-%POS-%INFO/CollapseId-%ID' ${polarizing}/polarized.asm.vcf.gz |\
+bcftools annotate --set-id '%CHROM-%POS-%INFO/SVTYPE-%INFO/CollapseId-%ID' ${polarizing}/polarized.asm.vcf.gz |\
 bcftools sort --max-mem 4G -O v |\
 ##remove duplicated SVs and retain the first entry
 bcftools norm --rm-dup all -O v |\
 ##shorten super long ID.
 ##[^\t]* meand any character except tab
-sed 's/;svim[^\t]*\t/\t/g' |bgzip -@ ${nT} -c> ${polarizing}/corrected.polarized.asm.vcf.gz
-bcftools index -f -t ${polarizing}/corrected.polarized.asm.vcf.gz
+sed 's/;svim[^\t]*\t/\t/g' |sed 's/svim_asm.//g'|bgzip -@ ${nT} -c> ${polarizing}/3corrected.polarized.asm.vcf.gz
+bcftools index -f -t ${polarizing}/3corrected.polarized.asm.vcf.gz
 
 #grep -v "#"|gawk '{print $3}'|uniq -d -c|less
 
-echo "Processing DUP & DEL"
 bcftools query -i 'SVTYPE="DUP" || SVTYPE="DEL"' -f '>%ID\n%REF\n' \
-${polarizing}/corrected.polarized.asm.vcf.gz >${TE}/SV.DUP-DEL.fa
+${polarizing}/3corrected.polarized.asm.vcf.gz >${TE}/SV.DUP-DEL.fa
 #for INS and INV, just extract the alt allele
-echo "Processing INS & INV"
 bcftools query -i 'SVTYPE="INS" || SVTYPE="INV"' -f '>%ID\n%ALT\n' \
-${polarizing}/corrected.polarized.asm.vcf.gz >${TE}/SV.INS-INV.fa
+${polarizing}/3corrected.polarized.asm.vcf.gz >${TE}/SV.INS-INV.fa
 cat ${TE}/SV.DUP-DEL.fa ${TE}/SV.INS-INV.fa >${TE}/SV.fa
 
 module load singularity/3.11.3
@@ -61,50 +59,51 @@ singularity exec -B ${TE} \
 -B /dfs7/jje/jenyuw/SV-project-temp/raw/Libraries:/opt/RepeatMasker/Libraries \
 /pub/jenyuw/Software/dfam-tetools-latest.sif \
 RepeatMasker -gff -s -xsmall \
--species "drosophila melanogaster" -dir ${TE}/extracted_SV2 \
+-species "drosophila melanogaster" -dir ${TE}/extracted_SV3 \
 ${TE}/SV.fa
 
 ##CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  sample
-
-cat ${TE}/extracted_SV2/SV.fa.out|gawk ' NR > 3 {print $0}' | while read line
+#2L-1055-DEL-1.1-DEL.3
+cat ${TE}/extracted_SV3/SV.fa.out|gawk ' NR > 3 {print $0}' | while read line
 do
-chr_pos_id=`echo $line|gawk '{print $5}'|gawk -F "-" '{print $1 "\t" $2 "\t" $0 "\t"}'`
+chr_pos_id_type=`echo $line|gawk '{print $5}'|gawk -F "-" '{print $1 "\t" $2 "\t" $0 "\t" $3 "\t"}'`
 order_supfam=`echo $line|gawk '{ if ( $11=="Simple_repeat") print $11 "\t" $10; else print $11}'|sed 's/\//\t/g;s/(//g;s/)n//g'`
-echo -e "${chr_pos_id}${order_supfam}"
-done >${TE}/SV_info.tsv
+echo -e "${chr_pos_id_type}${order_supfam}"
+done |gawk ' { if( NF<6 ) print $0 "\t" $5 ; else print $0}'|sort -k 4,4 -k 5,5 -k 6,6 |uniq >${TE}/3SV_info.tsv
+#cat SV_info.tsv|gawk ' { if( NF<5 ) print $0 "\t" $4 ; else print $0}'|sort -k 3,3 -k 4,4 -k 5,5|uniq >2SV_info.tsv
+bgzip -k -@ ${nT} ${TE}/3SV_info.tsv
+tabix -f -s 1 -b 2 -e 2 ${TE}/3SV_info.tsv.gz
 
-tabix -f -s 1 -b 2 -e 2 fake.info.tsv.gz
 
-
-
+#head -n 100 ${TE}/SV_info.tsv|sort -k 3,3 -k 4,4 -k 5,5|uniq |bgzip -c >${TE}/fake.info.tsv.gz
+#tabix -f -s 1 -b 2 -e 2 ${TE}/fake.info.tsv.gz
+cat SV_info.tsv|gawk ' { if( NF<5 ) print $0 "\t" $4 ; else print $0}' >2SV_info.tsv
 echo -e "##INFO=<ID=ORDER,Number=1,Type=String,Description=\"The order of the transposable element or a simple repeat\">
 ##INFO=<ID=SUPERFAMILY,Number=1,Type=String,Description=\"The SUPERFAMILY of the transposable element or the motif of a simple repeat\">" \
 >${TE}/add_header.txt
-
 zcat ${polarizing}/corrected.polarized.asm.vcf.gz| bcftools annotate -a ${TE}/SV_info.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
 
-zcat ${polarizing}/corrected.polarized.asm.vcf.gz|head -n 10000| bcftools annotate -a ${TE}/fake.info.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
+#zcat ${polarizing}/corrected.polarized.asm.vcf.gz|head -n 10000| bcftools annotate -a ${TE}/fake.info.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
 
 #1.CHROM   2.POS     3.ID 4.ORDER 5.SUPERFAMILY 
-#1.CHROM    2.POS 3.ID [ %GT]
+#1.CHROM    2.POS 3.ID [ %GT]......
 ##split the VCF
 bcftools query -f '%CHROM\t%POS\t%ID[ %GT]\n' ${polarizing}/corrected.polarized.asm.vcf.gz >${TE}/SV_genotype.tsv
 join -1 3 -2 3  <(sort -k 3,3 ${TE}/SV_info.tsv) <(sort -k 3,3 ${TE}/SV_genotype.tsv)|cut -d " " -f 2,3,1,4,5,8- |tr " " "\t" >${TE}/SV_genotype_info.tsv
 
 module load R/4.2.2
-Rscript -e 'library(tidyverse)
-t=read.table("fake.info.tsv",header=FALSE)
+Rscript -e '
+library(dplyr)
+library(tidyr)
+t=read.table("2SV_info.tsv",header=FALSE)
+g=read.table("SV_genotype.tsv",header=FALSE)
 colnames(t) <- c("CHROM","POS","ID","ORDER","SUPERFAMILY")
-t1=t %>% group_by_at(vars(SUPERFAMILY)) 
-head(t1,20) '
-%>%  summarize_all(paste, collapse=",")
-
-Rscript -e 't=read.table("fake.info.tsv",header=FALSE)
-colnames(t) <- c("CHROM","POS","ID","ORDER","SUPERFAMILY")
-t1 <- aggregate(cbind(ORDER, SUPERFAMILY)~., t,FUN = toString)
-head(t1,20) '
-tapply()
-aggregate()
+colnames(g) <- c("CHROM","POS","ID", colnames(g)[4:ncol(g)])
+t1=t %>% group_by(CHROM,POS,ID)%>% summarise_at(vars(ORDER:SUPERFAMILY),paste, collapse=",")
+all=g %>% left_join(t1,by=c("CHROM","POS","ID")) %>% replace_na(list(ORDER="not_repeat",SUPERFAMILY="not_repeat")) %>% relocate(ORDER, .after =ID)%>% relocate(SUPERFAMILY, .after =ORDER)
+head(all,25)
+write.table(all,"repeat_type_genotype.tsv",quote=FALSE,sep="\t",row.names=TRUE)
+'
 
 
 : <<'SKIP'
