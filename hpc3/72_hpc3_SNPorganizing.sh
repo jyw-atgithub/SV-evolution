@@ -3,8 +3,8 @@
 #SBATCH --job-name=snp    ## Name of the job.
 #SBATCH -A jje_lab       ## account to charge
 #SBATCH -p standard        ## partition/queue name
-#SBATCH --array=2-62%1      ## number of tasks to launch (wc -l prefixes.txt)
-#SBATCH --cpus-per-task=60   ## number of cores the job needs
+#SBATCH --array=1      ## number of tasks to launch (wc -l prefixes.txt)
+#SBATCH --cpus-per-task=10   ## number of cores the job needs
 #SBATCH --mem-per-cpu=6G     # requesting 6 GB memory per CPU, the max
 
 #Because nanocaller produce intermediate files of the same name, we can only run one sample at a time
@@ -17,7 +17,7 @@ Merged_SNP="/dfs7/jje/jenyuw/SV-project-temp/result/Merged_SNP"
 processed="/dfs7/jje/jenyuw/SV-project-temp/result/processed_SNP"
 coordinate_bed="/dfs7/jje/jenyuw/SV-project-temp/result/coordinate_bed"
 merged_SVs="/dfs7/jje/jenyuw/SV-project-temp/result/merged_SVs"
-dmel="dmel-all-r6.46"
+dmel="dmel-all-r6.49"
 ## prep
 nT=$SLURM_CPUS_PER_TASK
 
@@ -26,13 +26,22 @@ source ~/.bashrc
 ## in an interactive mode
 cd ${processed}
 
-# Avoid using --missing-to-ref, because this does look like a good assumption
+# We would use --missing-to-ref
 bcftools merge --threads ${nT} ${SNPs}/*.filtered.snps.vcf.gz -O z > ${Merged_SNP}/all.snps.vcf.gz
 tabix -p vcf ${Merged_SNP}/all.snps.vcf.gz
 
 conda activate everything
-snpEff -v BDGP6.32.105 ${Merged_SNP}/all.snps.vcf.gz | bgzip -@ ${nT} -c  >${Merged_SNP}/all.snps.annotated.vcf.gz
+snpEff -v BDGP6.32.105 ${Merged_SNP}/all.snps.vcf.gz |\
+#we also need to transform "./." to "0/0" 
+bcftools +missing2ref |\
+#then we count the allele frequency
+bcftools +fill-tags -- -t AF,MAF > bgzip -@ ${nT} -c  >${Merged_SNP}/all.snps.annotated.vcf.gz
 conda deactivate
+
+#bcftools view all.snps.annotated.vcf.gz |\
+#bcftools sort --max-mem 2G |\
+#bcftools +missing2ref |\
+#bcftools +fill-tags -- -t AF,MAF | bgzip -@ ${nT} -c  >${Merged_SNP}/all.snps.annotated2.vcf.gz
 
 # NON_SYNONYMOUS={missense_variant,start_lost,stop_gained,stop_lost}
 # now we only compare between synonymous and missense variants
@@ -60,7 +69,9 @@ for i in dig pig si li three_prime_UTR five_prime_UTR; do
     > $processed/${i}SNPs.vcf.gz
 done
 
-input="${merged_SVs}/truvari.svimASM.vcf.gz"
+bcftools query -f '%MAF \n' ${processed}/synSNPs.vcf.gz |sort -n|uniq -c >${processed}/MAF_syn.tsv
+
+input="${merged_SVs}/truvari.asm-2.vcf.gz"
 ##either %END or  %INFO/END works
 ##ant character in the '' will be output, even a space!!
 bcftools query -f '%CHROM\t%POS\t%END\n' ${input} > ${coordinate_bed}/SV-svimasm-coordinate.bed

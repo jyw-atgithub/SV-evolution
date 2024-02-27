@@ -71,36 +71,47 @@ order_supfam=`echo $line|gawk '{ if ( $11=="Simple_repeat") print $11 "\t" $10; 
 echo -e "${chr_pos_id_type}${order_supfam}"
 done |gawk ' { if( NF<6 ) print $0 "\t" $5 ; else print $0}'|sort -k 4,4 -k 5,5 -k 6,6 |uniq >${TE}/3SV_info.tsv
 #cat SV_info.tsv|gawk ' { if( NF<5 ) print $0 "\t" $4 ; else print $0}'|sort -k 3,3 -k 4,4 -k 5,5|uniq >2SV_info.tsv
-bgzip -k -@ ${nT} ${TE}/3SV_info.tsv
-tabix -f -s 1 -b 2 -e 2 ${TE}/3SV_info.tsv.gz
+
+cat 3SV_info.tsv|sort -n -k 1,1 -k 2,2|gawk ' $1=="2L" {print $0}'  >SV_info.good.tsv
+cat 3SV_info.tsv|sort -n -k 1,1 -k 2,2|gawk ' $1=="2R" {print $0}'  >>SV_info.good.tsv
+cat 3SV_info.tsv|sort -n -k 1,1 -k 2,2|gawk ' $1=="3L" {print $0}'  >>SV_info.good.tsv
+cat 3SV_info.tsv|sort -n -k 1,1 -k 2,2|gawk ' $1=="3R" {print $0}'  >>SV_info.good.tsv
+cat 3SV_info.tsv|sort -n -k 1,1 -k 2,2|gawk ' $1=="4" {print $0}'  >>SV_info.good.tsv
+cat 3SV_info.tsv|sort -n -k 1,1 -k 2,2|gawk ' $1=="X" {print $0}'  >>SV_info.good.tsv
+cat 3SV_info.tsv|sort -n -k 1,1 -k 2,2|gawk ' $1=="Y" {print $0}'  >>SV_info.good.tsv
+bgzip -k -f -@ ${nT} ${TE}/SV_info.good.tsv
+tabix -f -s 1 -b 2 -e 2 ${TE}/SV_info.good.tsv.gz
 
 
 #head -n 100 ${TE}/SV_info.tsv|sort -k 3,3 -k 4,4 -k 5,5|uniq |bgzip -c >${TE}/fake.info.tsv.gz
 #tabix -f -s 1 -b 2 -e 2 ${TE}/fake.info.tsv.gz
-cat SV_info.tsv|gawk ' { if( NF<5 ) print $0 "\t" $4 ; else print $0}' >2SV_info.tsv
+#cat SV_info.tsv|gawk ' { if( NF<5 ) print $0 "\t" $4 ; else print $0}' >2SV_info.tsv
 echo -e "##INFO=<ID=ORDER,Number=1,Type=String,Description=\"The order of the transposable element or a simple repeat\">
 ##INFO=<ID=SUPERFAMILY,Number=1,Type=String,Description=\"The SUPERFAMILY of the transposable element or the motif of a simple repeat\">" \
 >${TE}/add_header.txt
-zcat ${polarizing}/corrected.polarized.asm.vcf.gz| bcftools annotate -a ${TE}/SV_info.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
+zcat ${polarizing}/3corrected.polarized.asm.vcf.gz|\
+bcftools annotate -a ${TE}/SV_info.good.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
 
 #zcat ${polarizing}/corrected.polarized.asm.vcf.gz|head -n 10000| bcftools annotate -a ${TE}/fake.info.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
 
-#1.CHROM   2.POS     3.ID 4.ORDER 5.SUPERFAMILY 
+#1.CHROM   2.POS     3.ID 4.SVTYPE 5.ORDER 6.SUPERFAMILY 
 #1.CHROM    2.POS 3.ID [ %GT]......
 ##split the VCF
-bcftools query -f '%CHROM\t%POS\t%ID[ %GT]\n' ${polarizing}/corrected.polarized.asm.vcf.gz >${TE}/SV_genotype.tsv
-join -1 3 -2 3  <(sort -k 3,3 ${TE}/SV_info.tsv) <(sort -k 3,3 ${TE}/SV_genotype.tsv)|cut -d " " -f 2,3,1,4,5,8- |tr " " "\t" >${TE}/SV_genotype_info.tsv
+bcftools query -f '%CHROM\t%POS\t%ID[ %GT]\n' ${polarizing}/3corrected.polarized.asm.vcf.gz >${TE}/SV_genotype.tsv
+join -1 3 -2 3  <(sort -k 3,3 ${TE}/SV_info.good.tsv) <(sort -k 3,3 ${TE}/SV_genotype.tsv)|\
+cut -d " " -f 2,3,1,4,5,8- |tr " " "\t" >${TE}/SV_genotype_info.tsv
 
 module load R/4.2.2
 Rscript -e '
 library(dplyr)
 library(tidyr)
-t=read.table("2SV_info.tsv",header=FALSE)
+t=read.table("SV_info.good.tsv",header=FALSE)
 g=read.table("SV_genotype.tsv",header=FALSE)
-colnames(t) <- c("CHROM","POS","ID","ORDER","SUPERFAMILY")
+colnames(t) <- c("CHROM","POS","ID","SVTYPE","ORDER","SUPERFAMILY")
 colnames(g) <- c("CHROM","POS","ID", colnames(g)[4:ncol(g)])
-t1=t %>% group_by(CHROM,POS,ID)%>% summarise_at(vars(ORDER:SUPERFAMILY),paste, collapse=",")
-all=g %>% left_join(t1,by=c("CHROM","POS","ID")) %>% replace_na(list(ORDER="not_repeat",SUPERFAMILY="not_repeat")) %>% relocate(ORDER, .after =ID)%>% relocate(SUPERFAMILY, .after =ORDER)
+t1=t %>% group_by(CHROM,POS,ID,SVTYPE)%>% summarise_at(vars(ORDER:SUPERFAMILY),paste, collapse=",")
+all=g %>% left_join(t1,by=c("CHROM","POS","ID")) %>% replace_na(list(ORDER="not_repeat",SUPERFAMILY="not_repeat")) %>% 
+relocate(SVTYPE, .after =ID) %>% relocate(ORDER, .after =SVTYPE)%>% relocate(SUPERFAMILY, .after =ORDER) 
 head(all,25)
 write.table(all,"repeat_type_genotype.tsv",quote=FALSE,sep="\t",row.names=TRUE)
 '

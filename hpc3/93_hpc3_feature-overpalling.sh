@@ -8,6 +8,7 @@
 #SBATCH --mem-per-cpu=3G     # requesting memory per CPU
 
 dmel_ref="/dfs7/jje/jenyuw/SV-project-temp/reference/dmel-all-chromosome-r6.49.fasta"
+ref_gff="/dfs7/jje/jenyuw/SV-project-temp/reference/r649.corrected.gff"
 TE="/dfs7/jje/jenyuw/SV-project-temp/result/TE_repeat"
 org_SV="/dfs7/jje/jenyuw/SV-project-temp/result/organized_SVs"
 polarizing="/dfs7/jje/jenyuw/SV-project-temp/result/polarizing"
@@ -18,26 +19,17 @@ nT=$SLURM_CPUS_PER_TASK
 #transform vcf to bed format
 #bcftools query -f '%CHROM\t%POS0\t%END\t%ID\n' ${polarizing}/polarized.asm.vcf.gz >${org_SV}/polarized.asm.bed
 
-bedtools intersect -header -a ${polarizing}/polarized.asm.vcf.gz -b ${TE}/dmel-r649/dmel-r6.49.fasta.out.gff |\
-tee >(bcftools view -i 'SVTYPE="DEL"' -O z >${org_SV}/DEL.TE-overlap.asm.vcf.gz) |\
-tee >(bcftools view -i 'SVTYPE="INS"' -O z >${org_SV}/INS.TE-overlap.asm.vcf.gz) |\
-tee >(bcftools view -i 'SVTYPE="DUP"' -O z >${org_SV}/DUP.TE-overlap.asm.vcf.gz) |\
-tee >(bcftools view -i 'SVTYPE="INV"' -O z >${org_SV}/INV.TE-overlap.asm.vcf.gz) |\
-bcftools view -i 'SVTYPE="TRA"' -O z >${org_SV}/TRA.TE-overlap.asm.vcf.gz
-
-bedtools intersect -header -v -a ${polarizing}/polarized.asm.vcf.gz -b ${TE}/dmel-r649/dmel-r6.49.fasta.out.gff |\
-tee >(bcftools view -i 'SVTYPE="DEL"' -O z >${org_SV}/DEL.no-TE.asm.vcf.gz) |\
-tee >(bcftools view -i 'SVTYPE="INS"' -O z >${org_SV}/INS.no-TE.asm.vcf.gz) |\
-tee >(bcftools view -i 'SVTYPE="DUP"' -O z >${org_SV}/DUP.no-TE.asm.vcf.gz) |\
-tee >(bcftools view -i 'SVTYPE="INV"' -O z >${org_SV}/INV.no-TE.asm.vcf.gz) |\
-bcftools view -i 'SVTYPE="TRA"' -O z >${org_SV}/TRA.no-TE.asm.vcf.gz
 
 ##Remove duplicated SVs
-bcftools view -i 'SVTYPE="DUP"' -O v ${polarizing}/polarized.asm.vcf.gz |\
+bcftools view -O v ${polarizing}/3corrected.polarized.asm.vcf.gz |\
 bedtools intersect -header -a - -b ${pro_SNP}/dmel-all-r6.49.exonspans.bed |\
 tee >(grep "#">${org_SV}/DUP.exon-overlap.asm.vcf) |\
-bcftools sort -O v | grep -v "#" |sort -k1,1 -k2,2n |uniq >>${org_SV}/DUP.exon-overlap.asm.vcf
-bgzip -f -k -@ 4 ${org_SV}/DUP.exon-overlap.asm.vcf
-bcftools index -f -t ${org_SV}/DUP.exon-overlap.asm.vcf.gz
+bcftools +missing2ref |bcftools +fill-tags -- -t AF |bcftools filter -i 'AF>0.8' |\
+bcftools sort -O v |\
+##Remove duplicated SVs
+bcftools norm --rm-dup all -O z -o ${org_SV}/high_AF_exon-overlap.asm.vcf.gz
 
-bcftools view -i 'SVTYPE="DEL"' -O z -o ${org_SV}/DEL.asm.vcf  ${polarizing}/polarized.asm.vcf.gz 
+bcftools index -f -t ${org_SV}/high_AF_exon-overlap.asm.vcf.gz
+bcftools query -f '%SVTYPE\n' ${org_SV}/high_AF_exon-overlap.asm.vcf.gz |sort|uniq -c
+
+bedtools intersect -header -a ${ref_gff} -b ${org_SV}/high_AF_exon-overlap.asm.vcf.gz >${org_SV}/high_AF_exon-overlap.asm.gff

@@ -60,16 +60,17 @@ variance.d <- function(n,S) {
 
 
 #read the file
-vcf <- read.vcf("truvari.svimASM.rn.vcf", header=TRUE, stringsAsFactors=FALSE)
+vcf <- read.vcf("3corrected.polarized.asm.vcf", header=TRUE, stringsAsFactors=FALSE)
 ## if the quality score is ".", this function will report error.
 ## sed s@"\t.\tPASS"@"\t10\tPASS"@g truvari.svimASM.vcf >truvari.svimASM.rn.vcf
 #snp.vcf <- read.vcf("all.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
 snp.outside.vcf <- read.vcf("syn.outside-1000-svimasm.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
 syn.snp.vcf <- read.vcf("synSNPs.vcf", header=TRUE, stringsAsFactors=FALSE)
 bed <- read.table("pure-outside-svimasm.bed", header = FALSE)
+
 ##variables
 win.size=1000000
-syn.win.size=1000
+syn.win.size=20000
 total_chr <- levels(as.factor(vcf$CHROM))
 num.samples=ncol(vcf)-9
 container <- data.frame(matrix(ncol=13, nrow=0))
@@ -79,10 +80,10 @@ colnames(container) <- c("mut.type", "SV.type", "Chromosome","Start","End","Coun
 #This works
 #vcf.part = vcf %>% filter(CHROM == "2R")
 ncol(vcf)
-
+ncol(container)
 
 for (chr in total_chr){
-  for (what.to.filter in c("INS","DEL","DUP","INV", "BND")){
+  for (what.to.filter in c("INS","DEL","DUP","INV", "TRA")){
     #print(chr)
     vcf.part = vcf %>% filter(CHROM == chr) #calculate the window first 
     my.win <- seq(min(vcf.part$POS), max(vcf.part$POS), by=win.size)
@@ -291,7 +292,7 @@ container$SV.type <- factor(container$SV.type , levels=c("all.syn.SNP", "1k.syn.
 # http://www.cookbook-r.com/Graphs/Legends_(ggplot2)/
 levels(container$SV.type)[levels(container$SV.type)=="all.syn.SNP"] <- "SYN*"
 levels(container$SV.type)[levels(container$SV.type)=="1k.syn.SNP"] <- "1k**"
-
+container=container %>%drop_na()
 p3 <-ggplot(data= container)
 p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+
   theme_bw(base_size = 14) +
@@ -299,7 +300,7 @@ p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+
 p3 + geom_violin(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1, trim=FALSE)+
   theme_bw(base_size = 14) +
   xlab("Type of variant") + ylab("Tajima's D") +
-  geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color="black"), width=0.07)
+  geom_boxplot(mapping=aes(x= SV.type, y= TajimaD), width=0.07)
 
 p4 <-ggplot(data= container)
 p4 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=Chromosome))
