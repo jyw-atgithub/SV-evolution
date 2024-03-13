@@ -5,15 +5,12 @@
 ## vk tajima & vcftools --TajimaD only works on SNPs
 ## vcftools --TajimaD Expected at least 2 parts in FORMAT entry: ID=DR,Number=2,Type=Integer
 
-##global settings
-#setwd("/Users/Oscar/Desktop/plotting/SV-stats")
-setwd("/Users/Oscar/Desktop/Emerson_Lab_Work/SV-project")
 ##packages
 library("tidyverse")
 library(devtools)
+setwd("/Users/Oscar/Desktop/Emerson_Lab_Work/SV-project")
 
 ##Functions
-
 read.vcf <- function(file, special.char="##", ...) {
   my.search.term=paste0(special.char, ".*")
   all.lines=readLines(file)
@@ -64,13 +61,13 @@ vcf <- read.vcf("3corrected.polarized.asm.vcf", header=TRUE, stringsAsFactors=FA
 ## if the quality score is ".", this function will report error.
 ## sed s@"\t.\tPASS"@"\t10\tPASS"@g truvari.svimASM.vcf >truvari.svimASM.rn.vcf
 #snp.vcf <- read.vcf("all.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
-snp.outside.vcf <- read.vcf("syn.outside-1000-svimasm.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
+#snp.outside.vcf <- read.vcf("syn.outside-1000-svimasm.snps.vcf", header=TRUE, stringsAsFactors=FALSE)
 syn.snp.vcf <- read.vcf("synSNPs.vcf", header=TRUE, stringsAsFactors=FALSE)
-bed <- read.table("pure-outside-svimasm.bed", header = FALSE)
+#bed <- read.table("pure-outside-svimasm.bed", header = FALSE)
 
 ##variables
 win.size=1000000
-syn.win.size=20000
+syn.win.size=3000
 total_chr <- levels(as.factor(vcf$CHROM))
 num.samples=ncol(vcf)-9
 container <- data.frame(matrix(ncol=13, nrow=0))
@@ -268,54 +265,40 @@ for (i in 1:nrow(bed)){
   print(paste(round(100*i/nrow(bed),2),"%", sep = "", collapse=""))
 }
 
+library(RColorBrewer)
+library(khroma)
 
-
-p1 <-ggplot(data= container)
-p1 + geom_boxplot(mapping=aes(x= reorder(SV.type, Pi.persite, FUN = mean, decreasing=TRUE), 
-                              y= Pi.persite, color=SV.type), lwd=1)  + 
-  scale_y_log10() + theme_bw(base_size = 14) +
-  xlab("Type of variant") + ylab("log(Pi-per-site)")
-
-p2 <-ggplot(data= container)
-p2 + geom_boxplot(mapping=aes(x= SV.type, y= Pi/win.size, color=Chromosome))
-
-
-p3 <-ggplot(data= container)
-p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+ 
-  theme_bw(base_size = 14) +
-  xlab("Type of variant") + ylab("Tajima's D")
-
+container$SV.type =gsub("all.syn.SNP","SNP",container$SV.type)
 # levels(as.factor(container$SV.type))
 # change the order of display
-container$SV.type <- factor(container$SV.type , levels=c("all.syn.SNP", "1k.syn.SNP", "INS", "DEL", "DUP", "INV", "TRA"))
+container$SV.type <- factor(container$SV.type , levels=c("SNP", "INS", "DEL", "DUP", "INV", "TRA"))
+#x=reorder(SV.type, Pi.persite, FUN = mean, decreasing=TRUE)
+
+##output dimensions=2400*2000
+p1 <-ggplot(data= container)
+p1 + geom_violin(mapping=aes(x= SV.type, 
+                              y= Pi.persite, color=SV.type), lwd=2.8)  +
+  geom_boxplot(mapping=aes(x= SV.type, y= Pi.persite), width=0.12)+scale_colour_bright() +
+  scale_y_log10() + theme_light(base_size = 50) +
+  #xlab("Type of variant") + 
+  ylab("log(Pi-per-site)")+scale_colour_vibrant()+
+  theme(legend.title = element_text(size=40), legend.text = element_text(size=48))
+
 # Rename the column and the values in the factor
 # http://www.cookbook-r.com/Graphs/Legends_(ggplot2)/
-levels(container$SV.type)[levels(container$SV.type)=="all.syn.SNP"] <- "SYN*"
-levels(container$SV.type)[levels(container$SV.type)=="1k.syn.SNP"] <- "1k**"
-container=container %>%drop_na()
+#levels(container$SV.type)[levels(container$SV.type)=="all.syn.SNP"] <- "SYN*"
+#levels(container$SV.type)[levels(container$SV.type)=="1k.syn.SNP"] <- "1k**"
+
 p3 <-ggplot(data= container)
-p3 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1)+
-  theme_bw(base_size = 14) +
-  xlab("Type of variant") + ylab("Tajima's D")
-p3 + geom_violin(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=1, trim=FALSE)+
-  theme_bw(base_size = 14) +
+p3 + geom_violin(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=2.8, trim=FALSE)+
+  theme_bw(base_size = 50) +
   xlab("Type of variant") + ylab("Tajima's D") +
-  geom_boxplot(mapping=aes(x= SV.type, y= TajimaD), width=0.07)
+  geom_boxplot(mapping=aes(x= SV.type, y= TajimaD), width=0.12)+scale_colour_vibrant()+
+  theme(legend.title = element_text(size=40), legend.text = element_text(size=48))
 
-p4 <-ggplot(data= container)
-p4 + geom_boxplot(mapping=aes(x= SV.type, y= TajimaD, color=Chromosome))
-
-p5 <-ggplot(data= container)
-p5 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW.persite, color=SV.type)) +
-  scale_y_log10() + theme_bw()
-
-p6 <-ggplot(data= container)
-p6 + geom_boxplot(mapping=aes(x= SV.type, y= ThetaW, color=Chromosome))
-
-
-#write.csv(container, file="container.1212.csv")
-container=read.csv("container.1212.csv")
-a = container %>% filter(SV.type=="DEL")
+#write.csv(container, file="container.0304.csv")
+#container=read.csv("container.1212.csv")
+a = container %>% filter(SV.type=="all.syn.SNP")
 sum(a$Count)
 summary(a$ThetaW.persite)
 summary(a$Pi.persite)

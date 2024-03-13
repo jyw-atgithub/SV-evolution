@@ -11,8 +11,10 @@ ref_genome="/dfs7/jje/jenyuw/SV-project-temp/reference/dmel-all-chromosome-r6.49
 trimmed="/dfs7/jje/jenyuw/SV-project-temp/result/trimmed"
 polarizing="/dfs7/jje/jenyuw/SV-project-temp/result/polarizing"
 TE="/dfs7/jje/jenyuw/SV-project-temp/result/TE_repeat"
-source ~/.bashrc
+
 nT=$SLURM_CPUS_PER_TASK
+
+source ~/.bashrc
 
 : <<'SKIP'
 ########################This may cause redudant!!########################
