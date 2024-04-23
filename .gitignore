@@ -7,3 +7,6 @@
 *.vcf
 tmp.ignore
 *.fst
+*.bed
+*.xlsx
+*.txt
