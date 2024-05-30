@@ -144,6 +144,7 @@ dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bes
 
 dadi-cli Plot --fs ${input_fs} --demo-popt gr.InferDM.bestfits --output snps.vs.SV.pdf --model growth
 
+
 #so let's try AF-EU population
 
 cd /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/AF-EU_sfs/dadi
