@@ -33,35 +33,66 @@ sed 's@1\/1@1\|1@g;s@.\/.@0\|0@g;s@0\/1@0\|1@g' >AF-EU.syn-snp.vcf
 python3 /pub/jenyuw/Software/easySFS/easySFS.py -i AF-EU.syn-snp.vcf -p AF-EU_snp_popfile.tsv -a --preview
 python3 /pub/jenyuw/Software/easySFS/easySFS.py -i AF-EU.syn-snp.vcf -p AF-EU_snp_popfile.tsv -a -f --proj "66,10" -o AF-EU_sfs
 
-./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 --proj 5,21,3,33 -a --ploidy 1 --unfolded -o good_sfs1
-#./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 --proj 5,21,3,33 --ploidy 1 --unfolded -o good_sfs2
-./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 --proj 5,21,3,33 -a --unfolded -o good_sfs3
-#./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 --proj 5,21,3,33 --unfolded -o good_sfs4
-./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 --proj 10,42,6,66 -a --unfolded -o good_sfs5
-#./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 --proj 2,2,2,2 -a --ploidy 1 --unfolded -o good_sfs6
-#./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 --proj 2,2,2,2 -a  --unfolded -o good_sfs7
-./easySFS/easySFS.py  -i good.vcf -p popfile.txt2 -a --unfolded -o good_sfs8
+python3 /pub/jenyuw/Software/easySFS/easySFS.py  -i good.vcf -p popfile.txt --proj 5,21,3,33 -a --ploidy 1 --unfolded -o good_sfs1
+
+python3 /pub/jenyuw/Software/easySFS/easySFS.py  -i good.vcf -p EU_sv_popfile.tsv --proj 33 -a --ploidy 1 --unfolded -o SV_EU_sfs
+
 
 ## Let's only work on the Europe population first. 
 
-###!/usr/bin/python3
-python3
-#Real work in Python interactive mode
-import dadi
-import numpy
-#import Selection
-fs = dadi.Spectrum.from_file("EU-66.sfs")
-thetaW = fs.Watterson_theta()
-pi = fs.pi()
-D = fs.Tajima_D()
-#folded = fs.fold() #imput spectrum is already folded
-fs.mask[0] = True
-fs.mask[66] = True
-sample = fs.sample()
-quit()
+# ###!/usr/bin/python3
+# python3
+# #Real work in Python interactive mode
+# import pickle, random
+# import numpy as np
+# import nlopt
+# import dadi
+# import dadi.DFE as DFE
+# import matplotlib.pyplot as plt
+# from dadi.DFE import *
+# #import Selection
+# fs = dadi.Spectrum.from_file("EU-66.sfs")
+# thetaW = fs.Watterson_theta()
+# pi = fs.pi()
+# D = fs.Tajima_D()
+# #folded = fs.fold() #imput spectrum is already folded
+# fs.mask[0] = True
+# fs.mask[66] = True
+# sample = fs.sample()
+# quit()
 
-module unload python/3.10.2
 
+# module unload python/3.10.2
+
+# dataset = 'EU-66'
+# data_fs = dadi.Spectrum.from_file('EU-66.sfs')
+# demog_params = [0.08581,0.00738072]
+# ns = data_fs.sample_sizes
+# theta0 = 46237
+# #ns = [66]
+# theta_ns = theta0 * 2.31
+
+# spectra = DFE.Cache1D(demog_params, ns, DFE.DemogSelModels.growth_sel, 
+# gamma_bounds=(1e-5, 1000), gamma_pts=100, verbose=True, pts=[10])
+# pickle.dump(spectra, open('gr.bpkl','wb'))
+
+# data = dadi.Spectrum.from_file('EU-66.sfs')
+# cache1d = pickle.load(open('gr.bpkl','rb'))
+# cache1d = DFE.Cache1D(demog_params, ns, DFE.DemogSelModels.growth_sel, 
+# gamma_bounds=(1e-5, 1000), gamma_pts=100, verbose=True, pts=[10])
+# dfe_func = cache1d.integrate
+# sele_dist1d = DFE.PDFs.gamma
+# func_args = [sele_dist1d, theta_ns]
+# params = [0.1, 15000, 0.01]
+# lower_bounds = [1e-2, 1e-2, 1e-3]
+# upper_bounds = [10, 10000, 1]
+# p0 = dadi.Misc.perturb_params(params, fold=0, upper_bound=upper_bounds,
+#                               lower_bound=lower_bounds)
+# popt = dadi.Inference.opt(p0, data, cache1d.integrate, pts=None,
+#                                     func_args=func_args, 
+#                                     lower_bound=lower_bounds, 
+#                                     upper_bound=upper_bounds,
+#                                     maxeval=400, multinom=False, verbose=100)
 
 module load anaconda/2022.05
 conda activate dadi-cli
@@ -76,7 +107,8 @@ dadi-cli Model --names three_epoch #(nuB,nuF,TB,TF)
 #three_epoch
 #three_epoch_inbreeding
 cd /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/EU_sfs/dadi
-dadi-cli InferDM --fs "EU-66.sfs" --model growth --lbounds 0.00001 0  --ubounds 100000 10000  --output gr --optimizations 300
+dadi-cli InferDM --fs "EU-66.sfs" --model growth --lbounds 0.00001 0.00001  --ubounds 100000 10000  --output gr --optimizations 300
+dadi-cli InferDM --fs "EU-66.sfs" --model growth --lbounds 0.00001 0.00001  --ubounds 10 10  --output gr --optimizations 300
 dadi-cli BestFit --input-prefix "gr.InferDM" --lbounds 0.00001 0  --ubounds 100000 10000
 
 dadi-cli InferDM --fs "EU-66.sfs" --model two_epoch --lbounds 0.001 0.001  --ubounds 100 100  --output 2epo --optimizations 300
@@ -93,7 +125,25 @@ dadi-cli BestFit --input-prefix "3epoin.InferDM" --lbounds 0.1 0.1 0.1 0.1 0.000
 dadi-cli InferDM --fs "EU-66.sfs" --model three_epoch --lbounds 0.1 0.1 0.1 0.01  --ubounds 1000 100 1000 100  --output 3epo --optimizations 300
 dadi-cli BestFit --input-prefix "3epo.InferDM" --lbounds 0.1 0.1 0.1 0.01  --ubounds 1000 100 1000 100
 
-#no good convergence in European population with 1D models
+#Let fit the growth model with EU population
+#Manually edit the .bestfit file, remove the misid tag
+dadi-cli GenerateCache --model growth_sel --demo-popt "gr.InferDM.bestfits" --sample-size 33 --output gr_bpkl \
+--grids 1000 5000 10000 --gamma-pts 50 --gamma-bounds 0.0000001 2000
+
+dadi-cli Pdf --names gamma #params = [alpha, beta] = [shape, scale]
+input_fs="/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/SV_EU_sfs/dadi/EU-33.sfs"
+
+dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
+--pdf1d lognormal --p0 1 1 .5 --lbounds -10 0.01 0 --ubounds 10 10 0.5 \
+--ratio 2.31 \
+--output EU-SV_gr-log --optimizations 100 --maxeval 400 --check-convergence 5
+dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
+--pdf1d gamma --p0 2 1 0.5 --lbounds 0.001 0.001 0.001 --ubounds 100 100 100 \
+--ratio 2.31 \
+--output EU-SV_gr-gamma --optimizations 500 --maxeval 400 --check-convergence 50
+
+dadi-cli Plot --fs ${input_fs} --demo-popt gr.InferDM.bestfits --output snps.vs.SV.pdf --model growth
+
 #so let's try AF-EU population
 
 cd /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/AF-EU_sfs/dadi
