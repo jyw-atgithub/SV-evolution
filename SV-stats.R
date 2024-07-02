@@ -67,7 +67,7 @@ syn.snp.vcf <- read.vcf("synSNPs.vcf", header=TRUE, stringsAsFactors=FALSE)
 
 ##variables
 win.size=1000000
-syn.win.size=3000
+syn.win.size=5000
 total_chr <- levels(as.factor(vcf$CHROM))
 num.samples=ncol(vcf)-9
 container <- data.frame(matrix(ncol=13, nrow=0))
@@ -284,6 +284,15 @@ p1 + geom_violin(mapping=aes(x= SV.type,
   ylab("log(Pi-per-site)")+scale_colour_vibrant()+
   theme(legend.title = element_text(size=40), legend.text = element_text(size=48))
 
+p2 <-ggplot(data= container)
+p2 + geom_violin(mapping=aes(x= SV.type, 
+                             y= ThetaW.persite, color=SV.type), lwd=2.8)  +
+  geom_boxplot(mapping=aes(x= SV.type, y= ThetaW.persite), width=0.12)+scale_colour_bright() +
+  scale_y_log10() + theme_light(base_size = 50) +
+  #xlab("Type of variant") + 
+  ylab("log(ThetaW-per-site)")+scale_colour_vibrant()+
+  theme(legend.title = element_text(size=40), legend.text = element_text(size=48))
+
 # Rename the column and the values in the factor
 # http://www.cookbook-r.com/Graphs/Legends_(ggplot2)/
 #levels(container$SV.type)[levels(container$SV.type)=="all.syn.SNP"] <- "SYN*"
@@ -296,8 +305,8 @@ p3 + geom_violin(mapping=aes(x= SV.type, y= TajimaD, color=SV.type), lwd=2.8, tr
   geom_boxplot(mapping=aes(x= SV.type, y= TajimaD), width=0.12)+scale_colour_vibrant()+
   theme(legend.title = element_text(size=40), legend.text = element_text(size=48))
 
-#write.csv(container, file="container.0304.csv")
-#container=read.csv("container.1212.csv")
+write.csv(container, file="container.0529.csv")
+container=read.csv("container.0529.csv")
 a = container %>% filter(SV.type=="all.syn.SNP")
 sum(a$Count)
 summary(a$ThetaW.persite)

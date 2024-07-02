@@ -26,7 +26,7 @@ bcftools view --threads ${nT} -m2 -M2 -v snps -S EU_snp_popfile.TXT ${processed_
 sed 's@1\/1@1\|1@g;s@.\/.@0\|0@g;s@0\/1@0\|1@g' >EU.syn-snp.vcf
 python3 /pub/jenyuw/Software/easySFS/easySFS.py -i EU.syn-snp.vcf -p EU_snp_popfile.tsv -a --preview
 python3 /pub/jenyuw/Software/easySFS/easySFS.py -i EU.syn-snp.vcf -p EU_snp_popfile.tsv -a -f --proj 66 -o EU_sfs
-
+python3 /pub/jenyuw/Software/easySFS/easySFS.py -i EU.syn-snp.vcf -p EU_snp_popfile.tsv -a -f --proj 33 -o down_EU_sfs
 
 bcftools view --threads ${nT} -m2 -M2 -v snps -S AF-EU_snp_popfile.TXT ${processed_SNP}/synSNPs.vcf.gz |\
 sed 's@1\/1@1\|1@g;s@.\/.@0\|0@g;s@0\/1@0\|1@g' >AF-EU.syn-snp.vcf
@@ -132,17 +132,20 @@ dadi-cli GenerateCache --model growth_sel --demo-popt "gr.InferDM.bestfits" --sa
 
 dadi-cli Pdf --names gamma #params = [alpha, beta] = [shape, scale]
 input_fs="/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/SV_EU_sfs/dadi/EU-33.sfs"
-
-dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
---pdf1d lognormal --p0 1 1 .5 --lbounds -10 0.01 0 --ubounds 10 10 0.5 \
---ratio 2.31 \
---output EU-SV_gr-log --optimizations 100 --maxeval 400 --check-convergence 5
 dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
 --pdf1d gamma --p0 2 1 0.5 --lbounds 0.001 0.001 0.001 --ubounds 100 100 100 \
 --ratio 2.31 \
 --output EU-SV_gr-gamma --optimizations 500 --maxeval 400 --check-convergence 50
 
-dadi-cli Plot --fs ${input_fs} --demo-popt gr.InferDM.bestfits --output snps.vs.SV.pdf --model growth
+dadi-cli Plot --fs ${input_fs} --demo-popt EU-SV_gr-gamma.InferDFE.bestfits  --output snps.vs.SV.pdf --model growth
+
+input_fs="/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/down_EU_sfs/dadi/EU-33.sfs"
+dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
+--pdf1d gamma --p0 1 1 --lbounds 0.01 0.01 --ubounds 100 100 \
+--ratio 2.31 \
+--output EU-SV_gr-gamma --optimizations 50 --maxeval 400 --check-convergence 50
+
+dadi-cli Plot --fs ${input_fs} --demo-popt gr.InferDM.bestfits  --output snps.pdf --model growth
 
 
 #so let's try AF-EU population

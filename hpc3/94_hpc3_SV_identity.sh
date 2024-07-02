@@ -43,7 +43,7 @@ bcftools sort --max-mem 4G -O v |\
 ##remove duplicated SVs and retain the first entry
 bcftools norm --rm-dup all -O v |\
 ##shorten super long ID.
-##[^\t]* meand any character except tab
+##[^\t]* means any character except tab
 sed 's/;svim[^\t]*\t/\t/g' |sed 's/svim_asm.//g'|bgzip -@ ${nT} -c> ${polarizing}/3corrected.polarized.asm.vcf.gz
 bcftools index -f -t ${polarizing}/3corrected.polarized.asm.vcf.gz
 
@@ -113,7 +113,8 @@ colnames(t) <- c("CHROM","POS","ID","SVTYPE","ORDER","SUPERFAMILY")
 colnames(g) <- c("CHROM","POS","ID", colnames(g)[4:ncol(g)])
 t1=t %>% group_by(CHROM,POS,ID,SVTYPE)%>% summarise_at(vars(ORDER:SUPERFAMILY),paste, collapse=",")
 all=g %>% left_join(t1,by=c("CHROM","POS","ID")) %>% replace_na(list(ORDER="not_repeat",SUPERFAMILY="not_repeat")) %>% 
-relocate(SVTYPE, .after =ID) %>% relocate(ORDER, .after =SVTYPE)%>% relocate(SUPERFAMILY, .after =ORDER) 
+relocate(SVTYPE, .after =ID) %>% relocate(ORDER, .after =SVTYPE)%>% relocate(SUPERFAMILY, .after =ORDER) %>%
+separate(ID,into=c(NA,NA,"SVTYPE",NA, NA), sep="-", remove=FALSE) 
 head(all,25)
 write.table(all,"repeat_type_genotype.tsv",quote=FALSE,sep="\t",row.names=TRUE)
 '
