@@ -8,6 +8,12 @@ t1=read.table("repeat_type_genotype.tsv", header=TRUE)
 t1=t1 %>%mutate(across(colnames(t1)[6:ncol(t1)], ~ recode(.x, './.' = "0", '0/1' = "1", '1/0' = "1", '1/1' = "1")))
 t1$AF <- apply(t1, 1, function(x) length(which(x==1)))
 
+t1 = t1 %>% mutate(ORDER= case_match(ORDER, "Simple_repeat,Simple_repeat" ~ "Simple_repeat",
+                                         "LTR,Simple_repeat,Simple_repeat" ~ "LTR,Simple_repeat",
+                                         "Simple_repeat,Simple_repeat,Simple_repeat" ~ "Simple_repeat",
+                                     "Simple_repeat,Simple_repeat,Simple_repeat,Simple_repeat" ~ "Simple_repeat",
+                                     .default = ORDER))
+
 t_del=t1 %>%filter(SVTYPE=="DEL") %>% count(ORDER,sort=TRUE) %>%filter(n>100)
 temp=t1 %>%filter(SVTYPE=="DEL") %>% count(ORDER,sort=TRUE) %>%filter(n<100)
 t_del=t_del%>% add_row(ORDER = "other", n =sum(temp$n) ) %>% add_column(TYPE="DEL") 
@@ -18,21 +24,21 @@ temp=t1 %>%filter(SVTYPE=="INS") %>% count(ORDER,sort=TRUE) %>%filter(n<200)
 t_ins=t_ins%>% add_row(ORDER = "other", n =sum(temp$n) )%>% add_column(TYPE="INS")
 t_ins=t_ins %>% mutate(PERCENT=n/sum(t_ins$n))
 
-t_dup=t1 %>%filter(SVTYPE=="DUP") %>% count(ORDER,sort=TRUE) %>%filter(n>80)
-temp=t1 %>%filter(SVTYPE=="DUP") %>% count(ORDER,sort=TRUE) %>%filter(n<80)
+t_dup=t1 %>%filter(SVTYPE=="DUP") %>% count(ORDER,sort=TRUE) %>%filter(n>30)
+temp=t1 %>%filter(SVTYPE=="DUP") %>% count(ORDER,sort=TRUE) %>%filter(n<30)
 t_dup=t_dup%>% add_row(ORDER = "other", n =sum(temp$n) )%>% add_column(TYPE="DUP")
 t_dup=t_dup %>% mutate(PERCENT=n/sum(t_dup$n))
 
 t_all=bind_rows(t_del, t_ins, t_dup) 
-t_all= t_all %>% mutate(ORDER= case_match(ORDER, "Simple_repeat,Simple_repeat" ~ "Simple_repeat", "LTR,Simple_repeat,Simple_repeat" ~ "LTR,Simple_repeat",.default = ORDER)) %>%
-  group_by(ORDER, TYPE) %>% summarise(n=sum(n), PERCENT=sum(PERCENT)) %>%
+t_all= t_all %>% 
+  group_by(ORDER, TYPE) %>% summarise(n=sum(n), PERCENT=sum(PERCENT)) %>% 
   mutate(ORDER=factor(ORDER, levels=c("LINE","LINE,LTR","LINE,Simple_repeat","LTR","LTR,Simple_repeat","DNA","DNA,Simple_repeat","RC","Satellite","Satellite,Unknown","Simple_repeat","Low_complexity","Low_complexity,Simple_repeat","not_repeat","other") ))
 
 levels(as.factor(t_all$ORDER))
 p0=ggplot(data=t_all,aes(x=ORDER, y=PERCENT*100))
 #Each position adjustment can be recast as a function with manual width and height arguments:
 p0=p0+geom_col(aes(fill=TYPE), position=position_dodge2(preserve = "single"), width=0.5) +
-  labs(x="Type of repeat", y="percentage, %") + guides(x=guide_axis(angle=45) ) + 
+  labs(x="Type of repeat", y="percentage, %") + guides(x=guide_axis(angle=30) ) + 
   theme_minimal(base_size = 24 ) +scale_fill_vibrant(name="SV types") +
   theme(legend.text = element_text(size = 40),legend.title = element_text(size = 36))
 p0

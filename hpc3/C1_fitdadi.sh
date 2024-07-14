@@ -6,12 +6,10 @@ fit_dadi="/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi"
 nT=$SLURM_CPUS_PER_TASK
 
 cd /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi
-module load python/3.10.2
-
-python3 -m pip install dadi --user ##The only successfull way to install dadi for now
+#Using dadi directly is a tragedy
+#python3 -m pip install dadi --user ##The only successfull way to install dadi for now
 #python3 -m pip install dadi --prefix "/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/bin"
-git clone https://bitbucket.org/gutenkunstlab/dadi.git
-
+#git clone https://bitbucket.org/gutenkunstlab/dadi.git
 #Don't install from source, because it didn't work
 #git clone https://github.com/LohmuellerLab/fitdadi.git
 #cp /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/fitdadi_original/Selection.py /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/dadi
@@ -19,8 +17,11 @@ git clone https://bitbucket.org/gutenkunstlab/dadi.git
 #cd /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/dadi
 #python3 setup.py install --user
 
+module load python/3.10.2
 bcftools annotate -x FORMAT/SUPP polarized.asm.vcf.gz -O v |\
 sed 's@1\/1@1\|1@g;s@.\/.@0\|0@g' >good.vcf
+python3 /pub/jenyuw/Software/easySFS/easySFS.py  -i good.vcf -p EU_sv_popfile.tsv --proj 33 -a --ploidy 1 --unfolded -o SV_EU_sfs
+
 
 bcftools view --threads ${nT} -m2 -M2 -v snps -S EU_snp_popfile.TXT ${processed_SNP}/synSNPs.vcf.gz |\
 sed 's@1\/1@1\|1@g;s@.\/.@0\|0@g;s@0\/1@0\|1@g' >EU.syn-snp.vcf
@@ -33,13 +34,17 @@ sed 's@1\/1@1\|1@g;s@.\/.@0\|0@g;s@0\/1@0\|1@g' >AF-EU.syn-snp.vcf
 python3 /pub/jenyuw/Software/easySFS/easySFS.py -i AF-EU.syn-snp.vcf -p AF-EU_snp_popfile.tsv -a --preview
 python3 /pub/jenyuw/Software/easySFS/easySFS.py -i AF-EU.syn-snp.vcf -p AF-EU_snp_popfile.tsv -a -f --proj "66,10" -o AF-EU_sfs
 
-python3 /pub/jenyuw/Software/easySFS/easySFS.py  -i good.vcf -p popfile.txt --proj 5,21,3,33 -a --ploidy 1 --unfolded -o good_sfs1
 
-python3 /pub/jenyuw/Software/easySFS/easySFS.py  -i good.vcf -p EU_sv_popfile.tsv --proj 33 -a --ploidy 1 --unfolded -o SV_EU_sfs
+bcftools view --threads ${nT} -m2 -M2 -v snps -S EU_snp_popfile.TXT ${processed_SNP}/nonsynSNPs.vcf.gz |\
+sed 's@1\/1@1\|1@g;s@.\/.@0\|0@g;s@0\/1@0\|1@g' >EU.nonsyn-snp.vcf
+python3 /pub/jenyuw/Software/easySFS/easySFS.py -i EU.nonsyn-snp.vcf -p EU_snp_popfile.tsv -a --preview
+python3 /pub/jenyuw/Software/easySFS/easySFS.py -i EU.nonsyn-snp.vcf -p EU_snp_popfile.tsv -a -f --proj 33 -o EU_nonsyn_sfs
+
+#five_prime_UTRSNPs.vcf.gz
+
 
 
 ## Let's only work on the Europe population first. 
-
 # ###!/usr/bin/python3
 # python3
 # #Real work in Python interactive mode
@@ -60,8 +65,6 @@ python3 /pub/jenyuw/Software/easySFS/easySFS.py  -i good.vcf -p EU_sv_popfile.ts
 # fs.mask[66] = True
 # sample = fs.sample()
 # quit()
-
-
 # module unload python/3.10.2
 
 # dataset = 'EU-66'
@@ -95,7 +98,12 @@ python3 /pub/jenyuw/Software/easySFS/easySFS.py  -i good.vcf -p EU_sv_popfile.ts
 #                                     maxeval=400, multinom=False, verbose=100)
 
 module load anaconda/2022.05
-conda activate dadi-cli
+# Need to fix the python version to 3.8
+#conda create -n new-dadi-cli python=3.8
+#conda activate new-dadi-cli
+#conda install dadi-cli
+conda activate new-dadi-cli
+
 dadi-cli Model --names #this displays all the models
 dadi-cli Model --names bottlegrowth_1d #this displays the parameters #params = (nuB,nuF,T)
 dadi-cli Model --names growth #params = (nu,T)
@@ -125,27 +133,38 @@ dadi-cli BestFit --input-prefix "3epoin.InferDM" --lbounds 0.1 0.1 0.1 0.1 0.000
 dadi-cli InferDM --fs "EU-66.sfs" --model three_epoch --lbounds 0.1 0.1 0.1 0.01  --ubounds 1000 100 1000 100  --output 3epo --optimizations 300
 dadi-cli BestFit --input-prefix "3epo.InferDM" --lbounds 0.1 0.1 0.1 0.01  --ubounds 1000 100 1000 100
 
-#Let fit the growth model with EU population
+#Find the DFE of SVs
+#Let's fit the growth model with EU population
 #Manually edit the .bestfit file, remove the misid tag
+cd /dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/EU_sfs/dadi
+#generate the cache first
 dadi-cli GenerateCache --model growth_sel --demo-popt "gr.InferDM.bestfits" --sample-size 33 --output gr_bpkl \
 --grids 1000 5000 10000 --gamma-pts 50 --gamma-bounds 0.0000001 2000
-
+#Infer!!
 dadi-cli Pdf --names gamma #params = [alpha, beta] = [shape, scale]
 input_fs="/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/SV_EU_sfs/dadi/EU-33.sfs"
 dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
---pdf1d gamma --p0 2 1 0.5 --lbounds 0.001 0.001 0.001 --ubounds 100 100 100 \
+--pdf1d gamma --p0 2 1 --lbounds 0.001 0.001 --ubounds 100 100 \
 --ratio 2.31 \
 --output EU-SV_gr-gamma --optimizations 500 --maxeval 400 --check-convergence 50
-
+#Plot the SFS and residuals
 dadi-cli Plot --fs ${input_fs} --demo-popt EU-SV_gr-gamma.InferDFE.bestfits  --output snps.vs.SV.pdf --model growth
 
+#Infer the DFE of of the synonymous SNPs
 input_fs="/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/down_EU_sfs/dadi/EU-33.sfs"
 dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
---pdf1d gamma --p0 1 1 --lbounds 0.01 0.01 --ubounds 100 100 \
+--pdf1d gamma --p0 1 1 --lbounds 0.12 600 --ubounds 0.3 2000 \
 --ratio 2.31 \
---output EU-SV_gr-gamma --optimizations 50 --maxeval 400 --check-convergence 50
+--output EU-syn_gr-gamma --optimizations 500 --maxeval 600 --check-convergence 50
+#plotting doesn't work here
+#dadi-cli Plot --fs ${input_fs} --demo-popt EU-syn_gr-gamma.InferDFE.bestfits --output snps.pdf --model growth
 
-dadi-cli Plot --fs ${input_fs} --demo-popt gr.InferDM.bestfits  --output snps.pdf --model growth
+#Infer the DFE of of the NONsynonymous SNPs
+input_fs="/dfs7/jje/jenyuw/SV-project-temp/result/fit_dadi/EU_nonsyn_sfs/dadi/EU-33.sfs"
+dadi-cli InferDFE --fs ${input_fs} --cache1d gr_bpkl --demo-popt "gr.InferDM.bestfits" \
+--pdf1d gamma --p0 1 1 --lbounds 0.01 800 --ubounds 10 2000 \
+--ratio 2.31 \
+--output EU-nonsyn_gr-gamma --optimizations 500 --maxeval 400 --check-convergence 50
 
 
 #so let's try AF-EU population
