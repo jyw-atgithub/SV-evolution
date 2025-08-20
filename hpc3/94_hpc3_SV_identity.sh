@@ -91,8 +91,10 @@ tabix -f -s 1 -b 2 -e 2 ${TE}/SV_info.good.tsv.gz
 echo -e "##INFO=<ID=ORDER,Number=1,Type=String,Description=\"The order of the transposable element or a simple repeat\">
 ##INFO=<ID=SUPERFAMILY,Number=1,Type=String,Description=\"The SUPERFAMILY of the transposable element or the motif of a simple repeat\">" \
 >${TE}/add_header.txt
-zcat ${polarizing}/3corrected.polarized.asm.vcf.gz|\
-bcftools annotate -a ${TE}/SV_info.good.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
+
+##output the VCF with the order and superfamily of the SVs
+cat ${polarizing}/3corrected.polarized.asm.vcf.gz|\
+bcftools annotate -a ${TE}/SV_info.good.tsv.gz -c 'CHROM,POS,ID,SVTYPE,ORDER,SUPERFAMILY' --header-lines ${TE}/add_header.txt >${TE}/SV_TE-annotated.vcf
 
 #zcat ${polarizing}/corrected.polarized.asm.vcf.gz|head -n 10000| bcftools annotate -a ${TE}/fake.info.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/SUPERFAMILY' --header-lines ${TE}/add_header.txt|less -S
 
@@ -102,6 +104,8 @@ bcftools annotate -a ${TE}/SV_info.good.tsv.gz -c 'CHROM,POS,ID,INFO/ORDER,INFO/
 bcftools query -f '%CHROM\t%POS\t%ID[ %GT]\n' ${polarizing}/3corrected.polarized.asm.vcf.gz >${TE}/SV_genotype.tsv
 join -1 3 -2 3  <(sort -k 3,3 ${TE}/SV_info.good.tsv) <(sort -k 3,3 ${TE}/SV_genotype.tsv)|\
 cut -d " " -f 2,3,1,4,5,8- |tr " " "\t" >${TE}/SV_genotype_info.tsv
+
+
 
 module load R/4.2.2
 Rscript -e '
@@ -119,7 +123,7 @@ head(all,25)
 write.table(all,"repeat_type_genotype.tsv",quote=FALSE,sep="\t",row.names=TRUE)
 '
 
-
+##This needs to continue!!
 : <<'SKIP'
 cat ${TE}/extracted_SV2/SV.fa.out|gawk ' NR > 3 {print $0}' | while read line
 do

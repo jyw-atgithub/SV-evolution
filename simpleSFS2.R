@@ -2,7 +2,7 @@ library("ggplot2")
 library("tidyverse")
 library(RColorBrewer)
 library(khroma)
-
+#Source of the input file: /dfs7/jje/jenyuw/SV-project-temp/result/TE_repeat
 setwd("/Users/Oscar/Desktop/Emerson_Lab_Work/SV-project")
 t1=read.table("repeat_type_genotype.tsv", header=TRUE)
 t1=t1 %>%mutate(across(colnames(t1)[6:ncol(t1)], ~ recode(.x, './.' = "0", '0/1' = "1", '1/0' = "1", '1/1' = "1")))
