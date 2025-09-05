@@ -1,5 +1,9 @@
-#! /bin/bash
+#The FASTA file can be produced from GFA as follows:
+awk '/^S/{print ">"$2;print $3}' test.p_ctg.gfa |bgzip -@ 4 -o test.p_ctg.fasta.gz
 
+
+
+#! /bin/bash
 #SBATCH --job-name="correct2"
 #SBATCH -A jje_lab
 #SBATCH -p hugemem
@@ -104,51 +108,15 @@ filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
 corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
 assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
 micromamba activate verkko2
-verkko -d ${assembly}/verkko_6 --hifi ${filtered}/all_50k8k_corrected.filtered_40k.fasta  --nano ${filtered}/all_60k10k.fastq.gz \
+verkko -d ${assembly}/verkko_6 --hifi ${corrected}/all_50k8k_correct.fasta.gz  --nano ${filtered}/all_60k10k.renamed.fastq.gz \
 --unitig-abundance 4 --haploid  \
---mbg-run 56 330 96 \
+--mbg-run 50 330 96 \
 --local --local-memory 330 --local-cpus 56
 #--snakeopts "--unlock --default-resources mem_gb=330 n_cpus=56"
 #--lay_run <ncpus> <mem-in-gb> <time-in-h> DOES NOT WORK!
 micromamba deactivate
+#--> Very fragmented
 
-#! /bin/bash
-#SBATCH --job-name=hifiasm12
-#SBATCH -A jje_lab 
-#SBATCH -p standard
-#SBATCH --array=1
-#SBATCH --cpus-per-task=60
-#SBATCH --mem-per-cpu=6G
-#SBATCH --output="hifiasm_12.out"
-source ~/.bashrc
-filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
-corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
-assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
-nT=$SLURM_CPUS_PER_TASK
-mkdir ${assembly}/hifiasm_12
-cd ${assembly}/hifiasm_12
-hifiasm -l 0 --primary -t ${nT} --ul-rate 0.02 -o ONT_12 \
---ul ${filtered}/all_60k10k.fastq.gz ${filtered}/all_50k8k_corrected.filtered_40k.fasta
-#--> Terrible Result!!
-
-
-#! /bin/bash
-#SBATCH --job-name=hifiasm13
-#SBATCH -A jje_lab
-#SBATCH -p standard
-#SBATCH --array=1
-#SBATCH --cpus-per-task=60
-#SBATCH --mem-per-cpu=6G
-#SBATCH --output="hifiasm_13.out"
-source ~/.bashrc
-filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
-corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
-assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
-nT=$SLURM_CPUS_PER_TASK
-mkdir ${assembly}/hifiasm_13
-cd ${assembly}/hifiasm_13
-hifiasm -l 0 --primary -t ${nT} --ul-rate 0.02 -o ONT_13 --ont \
---ul ${filtered}/all_60k10k.fastq.gz ${filtered}/regular_100k.fastq.gz
 
 
 #! /bin/bash
@@ -168,6 +136,7 @@ mkdir ${assembly}/hifiasm_14
 cd ${assembly}/hifiasm_14
 hifiasm -l 0 --primary -t ${nT} --ul-rate 0.02 -o ONT_14 \
 --ul ${filtered}/all_60k10k.fastq.gz ${corrected}/all_60k10k_correct.fasta.gz
+## --> 80-90 nodes. missassembly. chr3R and chrX are joined together.
 
 #! /bin/bash
 #SBATCH --job-name=hifiasm15
@@ -186,17 +155,124 @@ mkdir ${assembly}/hifiasm_15
 cd ${assembly}/hifiasm_15
 hifiasm -l 0 --primary -t ${nT}  -o ONT_15 \
 --ul ${filtered}/all_50k8k.renamed.fastq.gz ${corrected}/all_50k8k_correct.fasta.gz
+##--> 107 nodes. no T2T. total 180M
+
+#! /bin/bash
+#SBATCH --job-name=hifias16
+#SBATCH -A jje_lab
+#SBATCH -p standard
+#SBATCH --array=1
+#SBATCH --cpus-per-task=60
+#SBATCH --mem-per-cpu=6G
+#SBATCH --output="hifiasm_16.out"
+source ~/.bashrc
+filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
+corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
+assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
+nT=$SLURM_CPUS_PER_TASK
+mkdir ${assembly}/hifiasm_16
+cd ${assembly}/hifiasm_16
+##This time, only assemble the adaptive reads at the beginning.
+hifiasm -l 0 --primary -t ${nT} --ont --ul ${filtered}/all_50k8k.renamed.fastq.gz ${filtered}/adaptive_10k.fastq.gz
+#--> Worse
+
+
+#! /bin/bash
+#SBATCH --job-name=hifias18
+#SBATCH -A jje_lab
+#SBATCH -p standard
+#SBATCH --array=1
+#SBATCH --cpus-per-task=60
+#SBATCH --mem-per-cpu=6G
+#SBATCH --output="hifiasm_18.out"
+source ~/.bashrc
+filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
+corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
+assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
+nT=$SLURM_CPUS_PER_TASK
+mkdir ${assembly}/hifiasm_18
+cd ${assembly}/hifiasm_18
+hifiasm -l 0 --primary --dual-scaf -t ${nT} --ont \
+--h1 ${filtered}/omnic_R1.fastq.gz --h2 ${filtered}/omnic_R2.fastq.gz \
+${filtered}/all_60k10k.renamed.fastq.gz
+#--> Genome size was 197M. Too big. No T2T.
+
+#! /bin/bash
+#SBATCH --job-name=hifias19
+#SBATCH -A jje_lab
+#SBATCH -p standard
+#SBATCH --array=1
+#SBATCH --cpus-per-task=50
+#SBATCH --mem-per-cpu=6G
+#SBATCH --output="hifiasm_19.out"
+source ~/.bashrc
+filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
+corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
+assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
+nT=$SLURM_CPUS_PER_TASK
+mkdir ${assembly}/hifiasm_19
+cd ${assembly}/hifiasm_19
+hifiasm -l 0 --primary --dual-scaf -t ${nT}  -o ONT_19 \
+--h1 ${filtered}/omnic_R1.fastq.gz --h2 ${filtered}/omnic_R2.fastq.gz \
+--ul ${filtered}/all_50k8k.renamed.fastq.gz ${corrected}/all_50k8k_correct.fasta.gz
+#--> 180M, 107 node.
+
+#! /bin/bash
+#SBATCH --job-name=hifias20
+#SBATCH -A jje_lab
+#SBATCH -p standard
+#SBATCH --array=1
+#SBATCH --cpus-per-task=50
+#SBATCH --mem-per-cpu=4G
+#SBATCH --output="hifiasm_20.out"
+source ~/.bashrc
+filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
+corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
+assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
+nT=$SLURM_CPUS_PER_TASK
+mkdir ${assembly}/hifiasm_20
+cd ${assembly}/hifiasm_20
+
+#Try to remove some duplication. Set "-l 1"
+hifiasm -l 1 --primary --dual-scaf -t ${nT} --ont \
+--h1 ${filtered}/omnic_R1.fastq.gz --h2 ${filtered}/omnic_R2.fastq.gz \
+${filtered}/all_60k10k.renamed.fastq.gz
+#--> 163 nodes. 196 M
+
+#! /bin/bash
+#SBATCH --job-name=hifias21
+#SBATCH -A jje_lab
+#SBATCH -p standard
+#SBATCH --array=1
+#SBATCH --cpus-per-task=50
+#SBATCH --mem-per-cpu=6G
+#SBATCH --output="hifiasm_21.out"
+source ~/.bashrc
+raw="/dfs7/jje/jenyuw/Assembling_ISO1/raw"
+filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
+corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
+assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
+nT=$SLURM_CPUS_PER_TASK
+mkdir ${assembly}/hifiasm_21
+cd ${assembly}/hifiasm_21
+
+seqkit seq -w0 -j ${nT} -m 40000 ${raw}/sup_simplex_Q10.fastq.gz -o ${filtered}/sup_40k_Q10.fastq.gz
+wait
+
+hifiasm -l 0 --primary --dual-scaf -t ${nT} --ul ${filtered}/sup_40k_Q10.fastq.gz \
+${filtered}/sup_corrected_40k.fastq.gz
+
 
 #################################################################################################################
 
 
 #! /bin/bash
 
-#SBATCH --job-name="correct3"
+#SBATCH --job-name="correct4"
 #SBATCH -A jje_lab
 #SBATCH -p hugemem
 #SBATCH --cpus-per-task=40
-#SBATCH --output="dorado_correct_3.out"
+#SBATCH --output="dorado_correct_4.out"
 source ~/.bashrc
 raw="/dfs7/jje/jenyuw/Assembling_ISO1/raw"
 filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
@@ -204,8 +280,8 @@ corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
 nT=$SLURM_CPUS_PER_TASK
 #dorado correct --verbose --to-paf ${filtered}/all_60k10k.fastq.gz > ${corrected}/all_60k10k.paf
 #dorado correct --verbose --to-paf ${filtered}/all_50k8k.renamed.fastq.gz > ${corrected}/all_50k8k.paf
-dorado correct --verbose --to-paf ${raw}/sup_simplex_Q10.fastq.gz > ${corrected}/sup_simplex_Q10.paf
-
+#dorado correct --verbose --to-paf ${raw}/sup_simplex_Q10.fastq.gz > ${corrected}/sup_simplex_Q10.paf
+dorado correct --verbose --to-paf ${filtered}/all_40k8k.renamed.fastq.gz > ${corrected}/all_40k8k.paf
 
 #! /bin/bash
 
@@ -296,3 +372,43 @@ flye --nano-hq ${filtered}/all_30k5k_Q15.fastq.gz --out-dir ${assembly}/flye_2 \
 --meta --keep-haplotypes --scaffold
 
 module unload python/3.10.2
+
+
+#! /bin/bash
+#SBATCH --job-name=hifiasm12
+#SBATCH -A jje_lab 
+#SBATCH -p standard
+#SBATCH --array=1
+#SBATCH --cpus-per-task=60
+#SBATCH --mem-per-cpu=6G
+#SBATCH --output="hifiasm_12.out"
+source ~/.bashrc
+filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
+corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
+assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
+nT=$SLURM_CPUS_PER_TASK
+mkdir ${assembly}/hifiasm_12
+cd ${assembly}/hifiasm_12
+hifiasm -l 0 --primary -t ${nT} --ul-rate 0.02 -o ONT_12 \
+--ul ${filtered}/all_60k10k.fastq.gz ${filtered}/all_50k8k_corrected.filtered_40k.fasta
+#--> Terrible Result!!
+
+
+#! /bin/bash
+#SBATCH --job-name=hifiasm13
+#SBATCH -A jje_lab
+#SBATCH -p standard
+#SBATCH --array=1
+#SBATCH --cpus-per-task=60
+#SBATCH --mem-per-cpu=6G
+#SBATCH --output="hifiasm_13.out"
+source ~/.bashrc
+filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
+corrected="/dfs7/jje/jenyuw/Assembling_ISO1/results/corrected"
+assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
+nT=$SLURM_CPUS_PER_TASK
+mkdir ${assembly}/hifiasm_13
+cd ${assembly}/hifiasm_13
+hifiasm -l 0 --primary -t ${nT} --ul-rate 0.02 -o ONT_13 --ont \
+--ul ${filtered}/all_60k10k.fastq.gz ${filtered}/regular_100k.fastq.gz
+##--> very fragmented
