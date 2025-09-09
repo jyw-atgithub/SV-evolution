@@ -8,7 +8,7 @@ trimmed="/dfs7/jje/jenyuw/Assembling_ISO1/results/trimmed"
 filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
 fastp --verbose --detect_adapter_for_pe --overrepresentation_analysis --correction \
 --cut_right --average_qual 20 --length_required 100 --thread 20 \
---html ${trimmed}/S33_qc.html \
+--html ${trimmed}/S33_qc.html --json ${trimmed}/S33_qc.json \
 -i ${raw}/Iso1_6_S33_R1_001.fastq.gz -I ${raw}/Iso1_6_S33_R2_001.fastq.gz \
 -o ${trimmed}/S33_R1.fastq.gz -O ${trimmed}/S33_R2.fastq.gz
 
@@ -36,7 +36,7 @@ filtered="/dfs7/jje/jenyuw/Assembling_ISO1/results/filtered"
 assembly="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly"
 omnic="/dfs7/jje/jenyuw/Assembling_ISO1/results/omnic"
 
-genome="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly/hifiasm_14/ONT_14.fasta.gz"
+genome="/dfs7/jje/jenyuw/Assembling_ISO1/results/assembly/hifiasm_19/ONT_19.fasta"
 cp $genome $omnic
 genome=${omnic}/`basename $genome`
 
